@@ -1,0 +1,105 @@
+{
+  "id": "df01490fd36c",
+  "title": "Central Park",
+  "subtitle": "9.83 km · 0 turns · morning",
+  "features": {
+    "DistanceKM": 9.833011026878507,
+    "DisplacementKM": 0.08978182774833429,
+    "Tortuosity": 109.5211723071759,
+    "LoopClosure": 0.9908693453609565,
+    "MeanCurvature": 0.029701530785660915,
+    "MaxCurvature": 0.3757115787252432,
+    "ElevationGainM": 0,
+    "DurationMinutes": 0,
+    "MeanPaceMinKM": 0,
+    "HardTurns": 0,
+    "SelfIntersections": 0,
+    "PointCount": 215,
+    "TimedPoints": 0,
+    "DwellPoints": 0,
+    "PaceChanges": 0,
+    "AspectRatio": 0.6701021268102999
+  },
+  "events": [
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.754638808187914,
+        "Y": 0.19801509452366847
+      },
+      "strength": 0.6829393104015431
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.24536119181208602,
+        "Y": 0.802135662159781
+      },
+      "strength": 0.5985048306656262
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.25007318074062845,
+        "Y": 0.8179721865743069
+      },
+      "strength": 0.59223564514395
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.37404394171243727,
+        "Y": 0.8784307902982325
+      },
+      "strength": 0.587936946706419
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.7480290805721734,
+        "Y": 0.18337253344406332
+      },
+      "strength": 0.5511923756805887
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.35770786970432855,
+        "Y": 0.8786532290742349
+      },
+      "strength": 0.43089075659777265
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.3870911679229008,
+        "Y": 0.8671189403021838
+      },
+      "strength": 0.3187802241561033
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.7497813802017607,
+        "Y": 0.2159237936009803
+      },
+      "strength": 0.2774006876361249
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.2650211178010322,
+        "Y": 0.830488797876854
+      },
+      "strength": 0.25
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.25111659834496447,
+        "Y": 0.7835635316924411
+      },
+      "strength": 0.25
+    }
+  ]
+}

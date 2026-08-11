@@ -1,0 +1,27 @@
+{
+  "engine_version": "field-3.0.0",
+  "seed": "e4a2570436e150b9",
+  "palette": "route-spectrum-295",
+  "candidate": "06",
+  "context": {
+    "LocationLabel": "The High Line",
+    "TimeOfDay": "evening",
+    "MusicTempo": 124,
+    "MusicEnergy": 0.72,
+    "Family": "route-turbulence",
+    "Palette": "route-directed"
+  },
+  "score": {
+    "Total": 0.918,
+    "Coverage": 0.296,
+    "Balance": 0.905,
+    "NegativeSpace": 0.806,
+    "Hierarchy": 1,
+    "RouteLegibility": 0.881,
+    "EdgeSafety": 0.97,
+    "Complexity": 1,
+    "ColorStructure": 0.885,
+    "AccentDiscipline": 0.97,
+    "FocalStrength": 1
+  }
+}

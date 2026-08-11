@@ -1,0 +1,20 @@
+{
+  "EngineVersion": "field-1.0.0",
+  "Seed": "dc3aefe4234a33a2",
+  "Palette": "blue-hour",
+  "Candidate": "09",
+  "Context": {
+    "LocationLabel": "Brooklyn Bridge",
+    "TimeOfDay": "afternoon",
+    "MusicTempo": 92,
+    "MusicEnergy": 0.41
+  },
+  "Score": {
+    "Total": 0.93,
+    "Coverage": 0.454,
+    "Balance": 0.985,
+    "NegativeSpace": 0.777,
+    "EdgeSafety": 0.98,
+    "Complexity": 0.816
+  }
+}

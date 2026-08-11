@@ -1,0 +1,44 @@
+{
+  "engine_version": "field-3.1.0",
+  "calibration_profile": "walk-art-v1",
+  "seed": "a0f7c13418201209",
+  "palette": "route-spectrum-069",
+  "candidate": "27",
+  "context": {
+    "LocationLabel": "Central Park",
+    "TimeOfDay": "morning",
+    "MusicTempo": 108,
+    "MusicEnergy": 0.44,
+    "Family": "route-turbulence",
+    "Palette": "route-directed"
+  },
+  "composition": {
+    "calibration_profile": "walk-art-v1",
+    "anchor": {
+      "position": {
+        "X": 0.754638808187914,
+        "Y": 0.19801509452366847
+      },
+      "source": "turn",
+      "strength": 0.6829393104015431
+    },
+    "hero_trails": 2,
+    "supporting_trails": 107,
+    "ambient_trails": 380
+  },
+  "score": {
+    "Total": 0.903,
+    "Coverage": 0.4,
+    "Balance": 0.915,
+    "NegativeSpace": 0.968,
+    "Hierarchy": 1,
+    "RouteLegibility": 0.856,
+    "EdgeSafety": 0.97,
+    "Complexity": 1,
+    "ColorStructure": 0.831,
+    "AccentDiscipline": 0.989,
+    "FocalStrength": 1,
+    "HeroSupport": 1,
+    "AnchorStrength": 0.997
+  }
+}

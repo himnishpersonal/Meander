@@ -1,0 +1,18 @@
+{
+  "id": "36448a74f657",
+  "title": "The High Line",
+  "subtitle": "5.43 km · 6 turns · evening",
+  "features": {
+    "DistanceKM": 5.431536867379055,
+    "DisplacementKM": 0.01703424750641493,
+    "Tortuosity": 318.8598067119544,
+    "LoopClosure": 0.9968638254839584,
+    "MeanCurvature": 0.12968474315107112,
+    "MaxCurvature": 2.6551682136665455,
+    "ElevationGainM": 0,
+    "HardTurns": 6,
+    "SelfIntersections": 0,
+    "PointCount": 428,
+    "AspectRatio": 0.3755799550261071
+  }
+}

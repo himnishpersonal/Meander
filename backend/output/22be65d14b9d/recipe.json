@@ -1,0 +1,20 @@
+{
+  "engine_version": "field-1.0.0",
+  "seed": "d7c57db5fc396920",
+  "palette": "alpine-dawn",
+  "candidate": "01",
+  "context": {
+    "LocationLabel": "Golden Gate Bridge",
+    "TimeOfDay": "morning",
+    "MusicTempo": 108,
+    "MusicEnergy": 0.19
+  },
+  "score": {
+    "Total": 0.888,
+    "Coverage": 0.411,
+    "Balance": 0.826,
+    "NegativeSpace": 0.816,
+    "EdgeSafety": 0.992,
+    "Complexity": 0.745
+  }
+}

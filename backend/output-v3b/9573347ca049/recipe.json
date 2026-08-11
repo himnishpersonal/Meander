@@ -1,0 +1,27 @@
+{
+  "engine_version": "field-3.0.0",
+  "seed": "422812e278c590e4",
+  "palette": "route-spectrum-018",
+  "candidate": "26",
+  "context": {
+    "LocationLabel": "Golden Gate",
+    "TimeOfDay": "dawn",
+    "MusicTempo": 82,
+    "MusicEnergy": 0.48,
+    "Family": "route-turbulence",
+    "Palette": "route-directed"
+  },
+  "score": {
+    "Total": 0.873,
+    "Coverage": 0.291,
+    "Balance": 0.805,
+    "NegativeSpace": 0.852,
+    "Hierarchy": 1,
+    "RouteLegibility": 0.805,
+    "EdgeSafety": 0.903,
+    "Complexity": 1,
+    "ColorStructure": 0.903,
+    "AccentDiscipline": 0.83,
+    "FocalStrength": 1
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "engine_version": "field-3.1.0",
+  "calibration_profile": "walk-art-v1",
+  "seed": "ec691ab9ce92fd37",
+  "palette": "route-spectrum-207",
+  "candidate": "06",
+  "context": {
+    "LocationLabel": "First Walk",
+    "TimeOfDay": "",
+    "MusicTempo": 0,
+    "MusicEnergy": 0,
+    "Family": "route-turbulence",
+    "Palette": "route-directed"
+  },
+  "composition": {
+    "calibration_profile": "walk-art-v1",
+    "anchor": {
+      "position": {
+        "X": 0.8321074986466895,
+        "Y": 0.29522522369663046
+      },
+      "source": "turn",
+      "strength": 0.5348298845209976
+    },
+    "hero_trails": 2,
+    "supporting_trails": 104,
+    "ambient_trails": 369
+  },
+  "score": {
+    "Total": 0.896,
+    "Coverage": 0.555,
+    "Balance": 0.948,
+    "NegativeSpace": 0.678,
+    "Hierarchy": 1,
+    "RouteLegibility": 0.739,
+    "EdgeSafety": 0.853,
+    "Complexity": 1,
+    "ColorStructure": 0.903,
+    "AccentDiscipline": 0.987,
+    "FocalStrength": 0.86,
+    "HeroSupport": 1,
+    "AnchorStrength": 0.999
+  }
+}

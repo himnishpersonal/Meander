@@ -1,0 +1,27 @@
+{
+  "engine_version": "field-3.0.0",
+  "seed": "d922927bfcd6f8db",
+  "palette": "route-spectrum-077",
+  "candidate": "20",
+  "context": {
+    "LocationLabel": "Central Park",
+    "TimeOfDay": "morning",
+    "MusicTempo": 108,
+    "MusicEnergy": 0.77,
+    "Family": "route-turbulence",
+    "Palette": "route-directed"
+  },
+  "score": {
+    "Total": 0.895,
+    "Coverage": 0.343,
+    "Balance": 0.921,
+    "NegativeSpace": 0.894,
+    "Hierarchy": 1,
+    "RouteLegibility": 0.814,
+    "EdgeSafety": 0.97,
+    "Complexity": 1,
+    "ColorStructure": 0.85,
+    "AccentDiscipline": 0.999,
+    "FocalStrength": 1
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "id": "a23be31c5eed",
+  "title": "Brooklyn Bridge",
+  "subtitle": "2.16 km · 1 turns · afternoon",
+  "features": {
+    "DistanceKM": 2.1628594671947177,
+    "DisplacementKM": 0.01707571255407178,
+    "Tortuosity": 126.662911450742,
+    "LoopClosure": 0.9921050291001017,
+    "MeanCurvature": 0.025467269044802683,
+    "MaxCurvature": 0.7616096630679321,
+    "ElevationGainM": 0,
+    "DurationMinutes": 0,
+    "MeanPaceMinKM": 0,
+    "HardTurns": 1,
+    "SelfIntersections": 1,
+    "PointCount": 78,
+    "TimedPoints": 0,
+    "DwellPoints": 0,
+    "PaceChanges": 0,
+    "AspectRatio": 0.957279629042247
+  },
+  "events": [
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.1468010027201978,
+        "Y": 0.12000000000046514
+      },
+      "strength": 1
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.13642526718336606,
+        "Y": 0.12548306649377922
+      },
+      "strength": 1
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.13943605517785648,
+        "Y": 0.1421078093153005
+      },
+      "strength": 0.5364023317336649
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.8378358671231501,
+        "Y": 0.8741645028162125
+      },
+      "strength": 0.36878917255993826
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.16366389330323475,
+        "Y": 0.1283726814261726
+      },
+      "strength": 0.3619999492123835
+    }
+  ]
+}

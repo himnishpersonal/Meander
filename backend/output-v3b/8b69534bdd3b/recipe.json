@@ -1,0 +1,27 @@
+{
+  "engine_version": "field-3.0.0",
+  "seed": "6f5867adbb0b081c",
+  "palette": "route-spectrum-097",
+  "candidate": "02",
+  "context": {
+    "LocationLabel": "Brooklyn Bridge",
+    "TimeOfDay": "afternoon",
+    "MusicTempo": 96,
+    "MusicEnergy": 0.66,
+    "Family": "route-turbulence",
+    "Palette": "route-directed"
+  },
+  "score": {
+    "Total": 0.924,
+    "Coverage": 0.405,
+    "Balance": 0.953,
+    "NegativeSpace": 0.973,
+    "Hierarchy": 1,
+    "RouteLegibility": 0.72,
+    "EdgeSafety": 0.9,
+    "Complexity": 1,
+    "ColorStructure": 0.785,
+    "AccentDiscipline": 0.883,
+    "FocalStrength": 1
+  }
+}

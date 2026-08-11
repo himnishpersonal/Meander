@@ -1,0 +1,24 @@
+{
+  "engine_version": "field-2.0.0",
+  "seed": "57afed9a1b100f99",
+  "palette": "blue-hour",
+  "candidate": "07",
+  "context": {
+    "LocationLabel": "The High Line",
+    "TimeOfDay": "evening",
+    "MusicTempo": 124,
+    "MusicEnergy": 0.68,
+    "Family": "auto",
+    "Palette": "auto"
+  },
+  "score": {
+    "Total": 0.879,
+    "Coverage": 0.362,
+    "Balance": 0.685,
+    "NegativeSpace": 0.772,
+    "Hierarchy": 1,
+    "RouteLegibility": 1,
+    "EdgeSafety": 0.994,
+    "Complexity": 0.874
+  }
+}

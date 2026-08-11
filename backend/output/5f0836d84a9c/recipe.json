@@ -1,0 +1,20 @@
+{
+  "engine_version": "field-1.0.0",
+  "seed": "565e8c8511806051",
+  "palette": "alpine-dawn",
+  "candidate": "08",
+  "context": {
+    "LocationLabel": "Brooklyn Bridge",
+    "TimeOfDay": "morning",
+    "MusicTempo": 108,
+    "MusicEnergy": 0.52
+  },
+  "score": {
+    "Total": 0.935,
+    "Coverage": 0.44,
+    "Balance": 0.973,
+    "NegativeSpace": 0.789,
+    "EdgeSafety": 0.993,
+    "Complexity": 0.85
+  }
+}

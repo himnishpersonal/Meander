@@ -1,0 +1,44 @@
+{
+  "engine_version": "field-3.1.0",
+  "calibration_profile": "walk-art-v1",
+  "seed": "202011baec5bd2d9",
+  "palette": "route-spectrum-073",
+  "candidate": "22",
+  "context": {
+    "LocationLabel": "Golden Gate Bridge",
+    "TimeOfDay": "morning",
+    "MusicTempo": 108,
+    "MusicEnergy": 0.54,
+    "Family": "route-turbulence",
+    "Palette": "route-directed"
+  },
+  "composition": {
+    "calibration_profile": "walk-art-v1",
+    "anchor": {
+      "position": {
+        "X": 0.5359972299441902,
+        "Y": 0.8533283233981881
+      },
+      "source": "route-curvature",
+      "strength": 0.25
+    },
+    "hero_trails": 2,
+    "supporting_trails": 112,
+    "ambient_trails": 395
+  },
+  "score": {
+    "Total": 0.877,
+    "Coverage": 0.322,
+    "Balance": 0.791,
+    "NegativeSpace": 0.857,
+    "Hierarchy": 1,
+    "RouteLegibility": 0.781,
+    "EdgeSafety": 0.89,
+    "Complexity": 1,
+    "ColorStructure": 0.877,
+    "AccentDiscipline": 0.632,
+    "FocalStrength": 1,
+    "HeroSupport": 1,
+    "AnchorStrength": 0.937
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "engine_version": "field-3.1.0",
+  "calibration_profile": "walk-art-v1",
+  "seed": "113bee284366aa54",
+  "palette": "route-spectrum-076",
+  "candidate": "10",
+  "context": {
+    "LocationLabel": "Brooklyn Bridge",
+    "TimeOfDay": "morning",
+    "MusicTempo": 108,
+    "MusicEnergy": 0.77,
+    "Family": "route-turbulence",
+    "Palette": "route-directed"
+  },
+  "composition": {
+    "calibration_profile": "walk-art-v1",
+    "anchor": {
+      "position": {
+        "X": 0.1468010027201978,
+        "Y": 0.12000000000046514
+      },
+      "source": "turn",
+      "strength": 1
+    },
+    "hero_trails": 2,
+    "supporting_trails": 110,
+    "ambient_trails": 389
+  },
+  "score": {
+    "Total": 0.929,
+    "Coverage": 0.429,
+    "Balance": 0.98,
+    "NegativeSpace": 0.917,
+    "Hierarchy": 1,
+    "RouteLegibility": 0.711,
+    "EdgeSafety": 0.93,
+    "Complexity": 1,
+    "ColorStructure": 0.768,
+    "AccentDiscipline": 0.879,
+    "FocalStrength": 1,
+    "HeroSupport": 1,
+    "AnchorStrength": 0.98
+  }
+}

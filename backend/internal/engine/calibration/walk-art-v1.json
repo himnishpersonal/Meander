@@ -1,0 +1,52 @@
+{
+  "version": "walk-art-v1",
+  "scope": "global-corpus",
+  "coverage_target": 0.42,
+  "complexity_target": 380,
+  "negative_space": {
+    "target": 0.74,
+    "tolerance": 0.36,
+    "minimum_score": 0.40
+  },
+  "directional": {
+    "target": 0.68,
+    "tolerance": 0.42
+  },
+  "hierarchy": {
+    "dense_ratio_target": 0.34,
+    "width_spread_target": 1.20,
+    "hero_min": 1,
+    "hero_max": 3,
+    "supporting_min": 12,
+    "supporting_fraction": 0.22,
+    "hero_width_multiplier": 1.65,
+    "minimum_score": 0.35
+  },
+  "anchor": {
+    "safe_margin": 0.08,
+    "influence_radius": 0.16,
+    "minimum_score": 0.25
+  },
+  "color": {
+    "dominant_ratio_target": 0.82,
+    "flare_target": 0.055,
+    "flare_tolerance": 0.08
+  },
+  "focal": {
+    "baseline_ratio": 2.0,
+    "scale": 7.0
+  },
+  "weights": {
+    "negative_space": 0.15,
+    "hierarchy": 0.12,
+    "direction": 0.15,
+    "color_structure": 0.14,
+    "accent_discipline": 0.08,
+    "focal_strength": 0.09,
+    "hero_support": 0.10,
+    "anchor_strength": 0.09,
+    "edge_safety": 0.04,
+    "balance": 0.04
+  },
+  "minimum_total_score": 0.60
+}

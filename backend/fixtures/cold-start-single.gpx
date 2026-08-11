@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="walk-art-cold-start-test">
+  <trk><name>First Walk</name><trkseg>
+    <trkpt lat="40.71280" lon="-74.00600"><ele>5</ele><time>2026-08-09T10:00:00Z</time></trkpt>
+    <trkpt lat="40.71325" lon="-74.00545"><ele>7</ele><time>2026-08-09T10:01:00Z</time></trkpt>
+    <trkpt lat="40.71370" lon="-74.00470"><ele>11</ele><time>2026-08-09T10:02:00Z</time></trkpt>
+    <trkpt lat="40.71420" lon="-74.00430"><ele>12</ele><time>2026-08-09T10:03:40Z</time></trkpt>
+    <trkpt lat="40.71465" lon="-74.00485"><ele>10</ele><time>2026-08-09T10:04:40Z</time></trkpt>
+    <trkpt lat="40.71445" lon="-74.00570"><ele>8</ele><time>2026-08-09T10:05:40Z</time></trkpt>
+    <trkpt lat="40.71395" lon="-74.00620"><ele>9</ele><time>2026-08-09T10:06:40Z</time></trkpt>
+    <trkpt lat="40.71335" lon="-74.00645"><ele>6</ele><time>2026-08-09T10:07:40Z</time></trkpt>
+    <trkpt lat="40.71285" lon="-74.00605"><ele>5</ele><time>2026-08-09T10:08:40Z</time></trkpt>
+  </trkseg></trk>
+</gpx>

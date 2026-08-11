@@ -1,0 +1,24 @@
+{
+  "id": "9573347ca049",
+  "title": "Golden Gate",
+  "subtitle": "2.74 km · 0 turns · dawn",
+  "features": {
+    "DistanceKM": 2.7399687133833224,
+    "DisplacementKM": 2.6901823377850422,
+    "Tortuosity": 1.018506691869545,
+    "LoopClosure": 0.018170417550791518,
+    "MeanCurvature": 0.00603135663939261,
+    "MaxCurvature": 0.05200712797129858,
+    "ElevationGainM": 0,
+    "DurationMinutes": 0,
+    "MeanPaceMinKM": 0,
+    "HardTurns": 0,
+    "SelfIntersections": 8,
+    "PointCount": 33,
+    "TimedPoints": 0,
+    "DwellPoints": 0,
+    "PaceChanges": 0,
+    "AspectRatio": 0.13149865576463768
+  },
+  "events": null
+}

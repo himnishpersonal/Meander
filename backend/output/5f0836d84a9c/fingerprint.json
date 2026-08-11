@@ -1,0 +1,18 @@
+{
+  "id": "5f0836d84a9c",
+  "title": "Brooklyn Bridge",
+  "subtitle": "2.16 km · 1 turns · morning",
+  "features": {
+    "DistanceKM": 2.1628594671947177,
+    "DisplacementKM": 0.01707571255407178,
+    "Tortuosity": 126.662911450742,
+    "LoopClosure": 0.9921050291001017,
+    "MeanCurvature": 0.025467269044802683,
+    "MaxCurvature": 0.7616096630679321,
+    "ElevationGainM": 0,
+    "HardTurns": 1,
+    "SelfIntersections": 1,
+    "PointCount": 78,
+    "AspectRatio": 0.957279629042247
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "3a1a0a09fb49",
+  "title": "Central Park",
+  "subtitle": "9.83 km · 0 turns · morning",
+  "features": {
+    "DistanceKM": 9.833011026878507,
+    "DisplacementKM": 0.08978182774833429,
+    "Tortuosity": 109.5211723071759,
+    "LoopClosure": 0.9908693453609565,
+    "MeanCurvature": 0.029701530785660915,
+    "MaxCurvature": 0.3757115787252432,
+    "ElevationGainM": 0,
+    "HardTurns": 0,
+    "SelfIntersections": 0,
+    "PointCount": 215,
+    "AspectRatio": 0.6701021268102999
+  }
+}

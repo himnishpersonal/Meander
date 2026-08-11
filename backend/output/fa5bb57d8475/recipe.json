@@ -1,0 +1,20 @@
+{
+  "engine_version": "field-1.0.0",
+  "seed": "d9c0e2709ea7c51d",
+  "palette": "alpine-dawn",
+  "candidate": "03",
+  "context": {
+    "LocationLabel": "Central Park",
+    "TimeOfDay": "morning",
+    "MusicTempo": 108,
+    "MusicEnergy": 0.52
+  },
+  "score": {
+    "Total": 0.927,
+    "Coverage": 0.443,
+    "Balance": 0.965,
+    "NegativeSpace": 0.753,
+    "EdgeSafety": 0.998,
+    "Complexity": 0.85
+  }
+}

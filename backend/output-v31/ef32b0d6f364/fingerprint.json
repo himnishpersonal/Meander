@@ -1,0 +1,105 @@
+{
+  "id": "ef32b0d6f364",
+  "title": "First Walk",
+  "subtitle": "0.56 km · 0 turns · time unrecorded",
+  "features": {
+    "DistanceKM": 0.5618239479224734,
+    "DisplacementKM": 0.009944411595804035,
+    "Tortuosity": 56.496449539511275,
+    "LoopClosure": 0.9822997726733139,
+    "MeanCurvature": 0.026639855308782663,
+    "MaxCurvature": 0.29893784012340596,
+    "ElevationGainM": 8,
+    "DurationMinutes": 8.666666666666666,
+    "MeanPaceMinKM": 15.42594739635874,
+    "HardTurns": 0,
+    "SelfIntersections": 0,
+    "PointCount": 9,
+    "TimedPoints": 9,
+    "DwellPoints": 1,
+    "PaceChanges": 1,
+    "AspectRatio": 0.8792012059413665
+  },
+  "events": [
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.8321074986466895,
+        "Y": 0.29522522369663046
+      },
+      "strength": 0.5348298845209976
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.8332528534537728,
+        "Y": 0.31408171762778453
+      },
+      "strength": 0.4987566973136737
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.6742017128656183,
+        "Y": 0.12451503005930438
+      },
+      "strength": 0.4577135151637963
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.654704176406956,
+        "Y": 0.12000000000000001
+      },
+      "strength": 0.4289293343989341
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.16760646732959703,
+        "Y": 0.6652099415725647
+      },
+      "strength": 0.34668748825410556
+    },
+    {
+      "kind": "pause",
+      "position": {
+        "X": 0.8332528534537728,
+        "Y": 0.31408171762778453
+      },
+      "strength": 0.3333333333333333
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.16613846987428713,
+        "Y": 0.6436975520446463
+      },
+      "strength": 0.30582425903200594
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.8196318861656712,
+        "Y": 0.2775176855209821
+      },
+      "strength": 0.25
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.4081161425134991,
+        "Y": 0.19672844159862776
+      },
+      "strength": 0.25
+    },
+    {
+      "kind": "turn",
+      "position": {
+        "X": 0.3900747603411606,
+        "Y": 0.2102080120278961
+      },
+      "strength": 0.25
+    }
+  ]
+}

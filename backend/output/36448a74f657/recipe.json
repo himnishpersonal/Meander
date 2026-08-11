@@ -1,0 +1,20 @@
+{
+  "EngineVersion": "field-1.0.0",
+  "Seed": "361183c8a41a8bec",
+  "Palette": "blue-hour",
+  "Candidate": "06",
+  "Context": {
+    "LocationLabel": "The High Line",
+    "TimeOfDay": "evening",
+    "MusicTempo": 124,
+    "MusicEnergy": 0.68
+  },
+  "Score": {
+    "Total": 0.895,
+    "Coverage": 0.406,
+    "Balance": 0.82,
+    "NegativeSpace": 0.794,
+    "EdgeSafety": 0.995,
+    "Complexity": 0.9
+  }
+}

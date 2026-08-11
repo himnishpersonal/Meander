@@ -1,0 +1,17 @@
+{
+  "profile": "walk-art-v1",
+  "scope": "global-corpus",
+  "cases": [
+    { "id": "central-park", "route": "../../fixtures/central-park.osm", "kind": "loop" },
+    { "id": "high-line", "route": "../../fixtures/high-line.osm", "kind": "linear" },
+    { "id": "brooklyn-bridge", "route": "../../fixtures/brooklyn-bridge.osm", "kind": "crossing" },
+    { "id": "golden-gate", "route": "../../fixtures/golden-gate.osm", "kind": "linear" },
+    {
+      "id": "cold-start-single-upload",
+      "route": "../../fixtures/cold-start-single.gpx",
+      "kind": "cold-start-acceptance",
+      "user_history_count": 0,
+      "normalization_source": "walk-art-v1"
+    }
+  ]
+}

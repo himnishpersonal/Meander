@@ -1,0 +1,44 @@
+{
+  "engine_version": "field-3.1.0",
+  "calibration_profile": "walk-art-v1",
+  "seed": "7d70623a8b33c438",
+  "palette": "route-spectrum-222",
+  "candidate": "20",
+  "context": {
+    "LocationLabel": "The High Line",
+    "TimeOfDay": "night",
+    "MusicTempo": 108,
+    "MusicEnergy": 1,
+    "Family": "route-turbulence",
+    "Palette": "route-directed"
+  },
+  "composition": {
+    "calibration_profile": "walk-art-v1",
+    "anchor": {
+      "position": {
+        "X": 0.48711196297860193,
+        "Y": 0.12039854886741992
+      },
+      "source": "turn",
+      "strength": 1
+    },
+    "hero_trails": 2,
+    "supporting_trails": 114,
+    "ambient_trails": 403
+  },
+  "score": {
+    "Total": 0.919,
+    "Coverage": 0.341,
+    "Balance": 0.897,
+    "NegativeSpace": 0.918,
+    "Hierarchy": 1,
+    "RouteLegibility": 0.788,
+    "EdgeSafety": 0.958,
+    "Complexity": 1,
+    "ColorStructure": 0.886,
+    "AccentDiscipline": 0.892,
+    "FocalStrength": 1,
+    "HeroSupport": 1,
+    "AnchorStrength": 1
+  }
+}
