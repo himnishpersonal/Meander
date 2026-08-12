@@ -1,0 +1,113 @@
+name: Deploy production
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.mod
+      - run: go test ./...
+        working-directory: backend
+      - run: go vet ./...
+        working-directory: backend
+
+  deploy-api:
+    name: Deploy Go API
+    needs: verify
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      - id: deploy
+        uses: google-github-actions/deploy-cloudrun@v3
+        with:
+          service: ${{ vars.CLOUD_RUN_SERVICE || 'meander-api' }}
+          region: ${{ vars.GCP_REGION || 'us-east1' }}
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          source: ./backend
+          flags: >-
+            --allow-unauthenticated
+            --min-instances=0
+            --max-instances=2
+            --cpu=1
+            --memory=512Mi
+            --concurrency=4
+            --timeout=120
+          env_vars: |-
+            MEANDER_ENV=production
+            MEANDER_ALLOWED_ORIGINS=${{ vars.MEANDER_WEB_ORIGIN }}
+            MEANDER_APP_URL=${{ vars.MEANDER_WEB_ORIGIN }}
+            MEANDER_API_URL=${{ vars.MEANDER_API_ORIGIN }}
+            MEANDER_GOOGLE_CLIENT_ID=${{ vars.MEANDER_GOOGLE_CLIENT_ID }}
+            MEANDER_FIXTURES=/app/fixtures
+            MEANDER_OUTPUT=/app/output
+            R2_ACCOUNT_ID=${{ vars.R2_ACCOUNT_ID }}
+            R2_BUCKET=${{ vars.R2_BUCKET }}
+          secrets: |-
+            DATABASE_URL=meander-database-url:latest
+            R2_ACCESS_KEY_ID=meander-r2-access-key-id:latest
+            R2_SECRET_ACCESS_KEY=meander-r2-secret-access-key:latest
+      - name: Check API health
+        env:
+          API_URL: ${{ steps.deploy.outputs.url }}
+        run: curl --fail --retry 5 --retry-all-errors --max-time 20 "$API_URL/healthz"
+
+  deploy-frontend:
+    name: Deploy Cloudflare frontend
+    needs: deploy-api
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_MEANDER_API_URL: ${{ vars.MEANDER_API_ORIGIN }}
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.MEANDER_GOOGLE_CLIENT_ID }}
+      - id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: 4.92.0
+          command: deploy --config dist/server/wrangler.json
