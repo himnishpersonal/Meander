@@ -2,11 +2,12 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -89,32 +90,21 @@ func TestProductionCORSUsesAllowList(t *testing.T) {
 	}
 }
 
-func TestDevelopmentMagicLinkCreatesSession(t *testing.T) {
-	s := server{store: product.NewMemoryStore(), objects: product.LocalObjects{Root: t.TempDir()}, environment: "development"}
-	start := httptest.NewRequest(http.MethodPost, "/api/v1/auth/magic-link", bytes.NewBufferString(`{"email":"walker@example.com"}`))
+func TestGoogleSignInCreatesSession(t *testing.T) {
+	s := server{store: product.NewMemoryStore(), objects: product.LocalObjects{Root: t.TempDir()}, environment: "development", googleClientID: "google-client", verifyGoogle: func(_ context.Context, credential, audience string) (googleIdentity, error) {
+		if credential != "trusted-google-token" || audience != "google-client" {
+			return googleIdentity{}, errors.New("invalid token")
+		}
+		return googleIdentity{Email: "walker@example.com", Name: "Trail Walker"}, nil
+	}}
+	start := httptest.NewRequest(http.MethodPost, "/api/v1/auth/google", bytes.NewBufferString(`{"credential":"trusted-google-token"}`))
 	start.Header.Set("Content-Type", "application/json")
 	startRec := httptest.NewRecorder()
 	s.routes().ServeHTTP(startRec, start)
 	if startRec.Code != http.StatusCreated {
-		t.Fatalf("magic start: %d %s", startRec.Code, startRec.Body.String())
+		t.Fatalf("Google sign-in: %d %s", startRec.Code, startRec.Body.String())
 	}
-	var body struct {
-		MagicLink string `json:"magic_link"`
-	}
-	if err := json.Unmarshal(startRec.Body.Bytes(), &body); err != nil || body.MagicLink == "" {
-		t.Fatalf("missing development magic link: %s", startRec.Body.String())
-	}
-	parsed, err := url.Parse(body.MagicLink)
-	if err != nil {
-		t.Fatal(err)
-	}
-	verify := httptest.NewRequest(http.MethodGet, parsed.RequestURI(), nil)
-	verifyRec := httptest.NewRecorder()
-	s.routes().ServeHTTP(verifyRec, verify)
-	if verifyRec.Code != http.StatusSeeOther {
-		t.Fatalf("magic verify: %d %s", verifyRec.Code, verifyRec.Body.String())
-	}
-	cookies := verifyRec.Result().Cookies()
+	cookies := startRec.Result().Cookies()
 	if len(cookies) != 1 {
 		t.Fatalf("expected session cookie, got %#v", cookies)
 	}
@@ -123,6 +113,6 @@ func TestDevelopmentMagicLinkCreatesSession(t *testing.T) {
 	meRec := httptest.NewRecorder()
 	s.routes().ServeHTTP(meRec, me)
 	if meRec.Code != http.StatusOK || !bytes.Contains(meRec.Body.Bytes(), []byte("walker@example.com")) {
-		t.Fatalf("session did not identify user: %d %s", meRec.Code, meRec.Body.String())
+		t.Fatalf("Google session did not identify user: %d %s", meRec.Code, meRec.Body.String())
 	}
 }

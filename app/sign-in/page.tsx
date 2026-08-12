@@ -1,12 +1,72 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const API = (process.env.NEXT_PUBLIC_MEANDER_API_URL || "http://localhost:8080").replace(/\/$/, "");
 
+type GoogleCredentialResponse = { credential: string };
+type GoogleIdentity = {
+  initialize: (configuration: { client_id: string; callback: (response: GoogleCredentialResponse) => void; auto_select?: boolean }) => void;
+  renderButton: (element: HTMLElement, options: Record<string, string | number>) => void;
+};
+
+declare global {
+  interface Window {
+    google?: { accounts: { id: GoogleIdentity } };
+  }
+}
+
 export default function SignInPage() {
-  const [email, setEmail] = useState(""); const [message, setMessage] = useState(""); const [link, setLink] = useState(""); const [error, setError] = useState("");
-  async function submit(event: FormEvent) { event.preventDefault(); setError(""); setLink(""); setMessage("Sending your sign-in link…"); try { const response = await fetch(`${API}/api/v1/auth/magic-link`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({email}) }); const body = await response.json(); if (!response.ok) throw new Error(body.error || "Could not send a sign-in link."); setMessage(body.status === "development_magic_link" ? "Development sign-in link created." : "Check your email for a secure sign-in link."); if (body.magic_link) setLink(body.magic_link); } catch (reason) { setMessage(""); setError(reason instanceof Error ? reason.message : "Could not send a sign-in link."); } }
-  return <main className="sign-in-page"><header className="site-header"><Link className="brand" href="/"><span className="brand-line" />Meander</Link><Link className="nav-cta" href="/create">Create first <span>↗</span></Link></header><section className="sign-in-card"><p className="section-kicker">Save your work</p><h1>Sign in to<br />keep moving.</h1><p>We use a secure email link—no password to remember. Your library stays private unless you choose to share a work.</p><form onSubmit={submit}><label htmlFor="email">Email address</label><input id="email" type="email" required value={email} onChange={(event)=>setEmail(event.target.value)} placeholder="you@example.com" /><button className="primary-action" type="submit">Send secure link <span>→</span></button></form>{message && <p className="auth-message">{message}</p>}{link && <a className="dev-magic-link" href={link}>Open development sign-in link ↗</a>}{error && <p className="engine-error">{error}</p>}<small>By continuing, you agree to receive a sign-in email. You can delete your account and artwork at any time.</small></section></main>;
+  const button = useRef<HTMLDivElement>(null);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const clientID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
+  useEffect(() => {
+    if (!clientID) {
+      return;
+    }
+
+    let mounted = true;
+    const signIn = async (response: GoogleCredentialResponse) => {
+      setError("");
+      setMessage("Securing your Meander…");
+      try {
+        const result = await fetch(`${API}/api/v1/auth/google`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ credential: response.credential }),
+        });
+        const body = await result.json();
+        if (!result.ok) throw new Error(body.error || "Google sign-in could not be completed.");
+        window.location.assign("/library");
+      } catch (reason) {
+        if (!mounted) return;
+        setMessage("");
+        setError(reason instanceof Error ? reason.message : "Google sign-in could not be completed.");
+      }
+    };
+    const render = () => {
+      if (!mounted || !button.current || !window.google) return;
+      button.current.replaceChildren();
+      window.google.accounts.id.initialize({ client_id: clientID, callback: signIn, auto_select: false });
+      window.google.accounts.id.renderButton(button.current, { theme: "outline", size: "large", text: "continue_with", shape: "rectangular", width: 360 });
+    };
+    const existing = document.getElementById("google-identity-services");
+    if (existing) {
+      if (window.google) render(); else existing.addEventListener("load", render, { once: true });
+    } else {
+      const script = document.createElement("script");
+      script.id = "google-identity-services";
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.onload = render;
+      document.head.appendChild(script);
+    }
+    return () => { mounted = false; };
+  }, [clientID]);
+
+  return <main className="sign-in-page"><header className="site-header"><Link className="brand" href="/"><span className="brand-line" />Meander</Link><Link className="nav-cta" href="/create">Create first <span>↗</span></Link></header><section className="sign-in-card"><p className="section-kicker">Save your work</p><h1>Sign in to<br />keep moving.</h1><p>Use your Google account to save your walks, keep artwork private, and connect Strava when it arrives.</p><div className="google-sign-in" ref={button} aria-label="Continue with Google" />{message && <p className="auth-message">{message}</p>}{(error || !clientID) && <p className="engine-error">{error || "Google Sign-In is not configured on this device yet."}</p>}<small>Meander only uses your Google identity to create your account. Your activity data stays separate and is only connected when you choose Strava.</small></section></main>;
 }

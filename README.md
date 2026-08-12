@@ -180,6 +180,8 @@ Open:
 
 Nothing needs to be deployed.
 
+When `NEXT_PUBLIC_GOOGLE_CLIENT_ID` and `MEANDER_GOOGLE_CLIENT_ID` are present in the root `.env.local`, the local site uses Google Sign-In and the Go API verifies each identity token before creating a Meander session. A Google client secret is not used for this flow.
+
 ## API contract
 
 `POST http://localhost:8080/api/v1/generate` accepts multipart form data:

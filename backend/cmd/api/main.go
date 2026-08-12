@@ -11,7 +11,6 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
-	"net/mail"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -20,16 +19,24 @@ import (
 
 	"walkart/internal/engine"
 	"walkart/internal/product"
+
+	"google.golang.org/api/idtoken"
 )
+
+type googleIdentity struct{ Email, Name string }
+type googleVerifier func(context.Context, string, string) (googleIdentity, error)
 
 type server struct {
 	output, fixtures string
 	store            product.Store
 	objects          product.Objects
 	environment      string
+	googleClientID   string
+	verifyGoogle     googleVerifier
 }
 
 func main() {
+	loadDevelopmentEnv()
 	s, err := newServer(context.Background())
 	if err != nil {
 		log.Fatal(err)
@@ -42,7 +49,7 @@ func main() {
 func newServer(ctx context.Context) (server, error) {
 	out := envFallback("MEANDER_OUTPUT", "WALKART_OUTPUT", "output")
 	fixtures := envFallback("MEANDER_FIXTURES", "WALKART_FIXTURES", "fixtures")
-	s := server{output: out, fixtures: fixtures, environment: env("MEANDER_ENV", "development")}
+	s := server{output: out, fixtures: fixtures, environment: env("MEANDER_ENV", "development"), googleClientID: os.Getenv("MEANDER_GOOGLE_CLIENT_ID")}
 	if databaseURL := os.Getenv("DATABASE_URL"); databaseURL != "" {
 		store, err := product.NewPostgresStore(ctx, databaseURL)
 		if err != nil {
@@ -74,8 +81,7 @@ func (s server) routes() http.Handler {
 		writeJSON(w, 200, map[string]string{"status": "ok", "engine": engine.Version, "environment": s.environment})
 	})
 	mux.HandleFunc("GET /api/v1/samples", s.samples)
-	mux.HandleFunc("POST /api/v1/auth/magic-link", s.startMagicLink)
-	mux.HandleFunc("GET /api/v1/auth/verify", s.verifyMagicLink)
+	mux.HandleFunc("POST /api/v1/auth/google", s.googleSignIn)
 	mux.HandleFunc("POST /api/v1/auth/logout", s.logout)
 	mux.HandleFunc("GET /api/v1/me", s.me)
 	mux.HandleFunc("POST /api/v1/generate", s.generate)
@@ -89,58 +95,36 @@ func (s server) routes() http.Handler {
 	return cors(mux)
 }
 
-func (s server) startMagicLink(w http.ResponseWriter, r *http.Request) {
+func (s server) googleSignIn(w http.ResponseWriter, r *http.Request) {
+	if s.googleClientID == "" {
+		fail(w, http.StatusServiceUnavailable, errors.New("Google sign-in is not configured"))
+		return
+	}
 	var input struct {
-		Email       string `json:"email"`
-		DisplayName string `json:"display_name"`
+		Credential string `json:"credential"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 32<<10)).Decode(&input); err != nil {
-		fail(w, 400, errors.New("valid email is required"))
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 32<<10)).Decode(&input); err != nil || strings.TrimSpace(input.Credential) == "" {
+		fail(w, http.StatusBadRequest, errors.New("Google credential is required"))
 		return
 	}
-	input.Email = strings.ToLower(strings.TrimSpace(input.Email))
-	if _, err := mail.ParseAddress(input.Email); err != nil {
-		fail(w, 400, errors.New("valid email is required"))
-		return
+	verify := s.verifyGoogle
+	if verify == nil {
+		verify = verifyGoogleCredential
 	}
-	user, err := s.store.EnsureUser(r.Context(), input.Email, clean(input.DisplayName))
+	identity, err := verify(r.Context(), input.Credential, s.googleClientID)
 	if err != nil {
-		fail(w, 500, err)
+		fail(w, http.StatusUnauthorized, errors.New("Google sign-in could not be verified"))
 		return
 	}
-	token, err := secureToken()
+	user, err := s.store.EnsureUser(r.Context(), strings.ToLower(strings.TrimSpace(identity.Email)), clean(identity.Name))
 	if err != nil {
-		fail(w, 500, err)
+		fail(w, http.StatusInternalServerError, err)
 		return
 	}
-	if err = s.store.CreateMagicToken(r.Context(), tokenHash(token), user.ID, time.Now().Add(15*time.Minute)); err != nil {
-		fail(w, 500, err)
-		return
-	}
-	base := strings.TrimRight(env("MEANDER_API_URL", "http://localhost:8080"), "/")
-	magicURL := base + "/api/v1/auth/verify?token=" + token + "&return_to=/library"
-	if s.environment != "production" && os.Getenv("RESEND_API_KEY") == "" {
-		writeJSON(w, 201, map[string]string{"status": "development_magic_link", "magic_link": magicURL})
-		return
-	}
-	if err = sendMagicEmail(r.Context(), input.Email, magicURL); err != nil {
-		fail(w, 502, err)
-		return
-	}
-	writeJSON(w, 202, map[string]string{"status": "email_sent"})
+	s.issueSession(w, r, user)
 }
 
-func (s server) verifyMagicLink(w http.ResponseWriter, r *http.Request) {
-	token := r.URL.Query().Get("token")
-	if token == "" {
-		fail(w, 400, errors.New("magic link token is required"))
-		return
-	}
-	user, err := s.store.ConsumeMagicToken(r.Context(), tokenHash(token))
-	if err != nil {
-		fail(w, 401, errors.New("magic link has expired or was already used"))
-		return
-	}
+func (s server) issueSession(w http.ResponseWriter, r *http.Request, user product.User) {
 	session, err := secureToken()
 	if err != nil {
 		fail(w, 500, err)
@@ -151,11 +135,7 @@ func (s server) verifyMagicLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.SetCookie(w, &http.Cookie{Name: "meander_session", Value: session, Path: "/", HttpOnly: true, Secure: s.environment == "production", SameSite: http.SameSiteLaxMode, MaxAge: 30 * 24 * 60 * 60})
-	returnTo := r.URL.Query().Get("return_to")
-	if !strings.HasPrefix(returnTo, "/") || strings.HasPrefix(returnTo, "//") {
-		returnTo = "/library"
-	}
-	http.Redirect(w, r, strings.TrimRight(env("MEANDER_APP_URL", "http://localhost:3000"), "/")+returnTo, http.StatusSeeOther)
+	writeJSON(w, http.StatusCreated, map[string]any{"user": user})
 }
 
 func (s server) logout(w http.ResponseWriter, r *http.Request) {
@@ -374,7 +354,7 @@ func (s server) currentUser(r *http.Request) (product.User, error) {
 			return user, nil
 		}
 	}
-	if s.environment == "production" {
+	if s.environment == "production" || s.googleClientID != "" {
 		return product.User{}, errors.New("sign in is required")
 	}
 	return s.store.EnsureUser(r.Context(), env("MEANDER_DEV_USER_EMAIL", "local@meander.local"), "Local creator")
@@ -448,25 +428,53 @@ func tokenHash(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
 }
-func sendMagicEmail(ctx context.Context, email, magicURL string) error {
-	key, from := os.Getenv("RESEND_API_KEY"), os.Getenv("MEANDER_EMAIL_FROM")
-	if key == "" || from == "" {
-		return errors.New("RESEND_API_KEY and MEANDER_EMAIL_FROM are required for production email sign-in")
-	}
-	body, _ := json.Marshal(map[string]any{"from": from, "to": []string{email}, "subject": "Sign in to Meander", "html": "<p>Use this secure link to sign in to Meander. It expires in 15 minutes.</p><p><a href=\"" + magicURL + "\">Sign in to Meander</a></p>"})
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.resend.com/emails", strings.NewReader(string(body)))
+
+func verifyGoogleCredential(ctx context.Context, credential, audience string) (googleIdentity, error) {
+	payload, err := idtoken.Validate(ctx, credential, audience)
 	if err != nil {
-		return err
+		return googleIdentity{}, err
 	}
-	req.Header.Set("Authorization", "Bearer "+key)
-	req.Header.Set("Content-Type", "application/json")
-	response, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
+	email, _ := payload.Claims["email"].(string)
+	name, _ := payload.Claims["name"].(string)
+	verified, ok := payload.Claims["email_verified"].(bool)
+	if !ok {
+		if value, stringOK := payload.Claims["email_verified"].(string); stringOK {
+			verified = value == "true"
+		}
 	}
-	defer response.Body.Close()
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("email provider returned %s", response.Status)
+	if email == "" || !verified {
+		return googleIdentity{}, errors.New("Google account must have a verified email")
 	}
-	return nil
+	return googleIdentity{Email: email, Name: name}, nil
+}
+
+// loadDevelopmentEnv makes the ignored root .env.local available to a locally
+// launched Go API. Hosted environments supply values directly and take priority.
+func loadDevelopmentEnv() {
+	if os.Getenv("MEANDER_ENV") == "production" {
+		return
+	}
+	for _, path := range []string{".env.local", "../.env.local"} {
+		contents, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		for _, line := range strings.Split(string(contents), "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			key, value, ok := strings.Cut(line, "=")
+			key = strings.TrimSpace(key)
+			if !ok || key == "" {
+				continue
+			}
+			if _, exists := os.LookupEnv(key); exists {
+				continue
+			}
+			value = strings.Trim(strings.TrimSpace(value), "\"'")
+			_ = os.Setenv(key, value)
+		}
+		return
+	}
 }

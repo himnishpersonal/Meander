@@ -62,18 +62,19 @@ Environment variables:
 - `GCP_PROJECT_ID`
 - `GCP_REGION` — defaults to `us-east1`
 - `CLOUD_RUN_SERVICE` — defaults to `meander-api`
-- `MEANDER_WEB_ORIGIN` — exact production frontend origin used by API CORS
-- `MEANDER_API_ORIGIN` — exact public Cloud Run/custom API origin used in email links
+- `MEANDER_WEB_ORIGIN` — exact production frontend origin used by API CORS, e.g. `https://meander.app`
+- `MEANDER_API_ORIGIN` — exact public API origin, e.g. `https://api.meander.app`; use a sibling subdomain of the frontend so browser sessions remain first-party
+- `MEANDER_GOOGLE_CLIENT_ID` — Google Identity Services web client ID, used by both the API and frontend
 - `R2_ACCOUNT_ID`
 - `R2_BUCKET`
 
-Create these Google Secret Manager secrets before releasing: `meander-database-url`, `meander-r2-access-key-id`, `meander-r2-secret-access-key`, `meander-resend-api-key`, and `meander-email-from`. Google authentication uses Workload Identity Federation. Do not create or store a long-lived Google service-account JSON key in GitHub.
+Create these Google Secret Manager secrets before releasing: `meander-database-url`, `meander-r2-access-key-id`, and `meander-r2-secret-access-key`. Google authentication uses Workload Identity Federation. Do not create or store a long-lived Google service-account JSON key in GitHub. The Google Sign-In client ID is a public identifier, so it belongs in the `MEANDER_GOOGLE_CLIENT_ID` environment variable—not in Secret Manager. Google client secrets are not used by Meander's identity-token sign-in flow.
 
 Before the first release, apply [`backend/migrations/0001_product.sql`](../backend/migrations/0001_product.sql) to the production Neon database. The API intentionally does not run schema migrations at startup, which keeps a bad deployment from mutating production data automatically.
 
 ## Local parity
 
-Copy `.env.example` to an ignored `.env.local` for the frontend. The creation studio automatically uses `http://localhost:8080` when `NEXT_PUBLIC_MEANDER_API_URL` is absent. The Go API accepts localhost origins automatically and uses `MEANDER_ALLOWED_ORIGINS` for exact production origins.
+Copy `.env.example` to an ignored `.env.local` for local development. The creation studio automatically uses `http://localhost:8080` when `NEXT_PUBLIC_MEANDER_API_URL` is absent. The Go API reads this local file when it is run from the repository or `backend` directory. The API accepts localhost origins automatically and uses `MEANDER_ALLOWED_ORIGINS` for exact production origins.
 
 ## Release order
 
@@ -83,4 +84,4 @@ The current safe sequence is:
 2. publish a GitHub Release or manually start `Deploy production`;
 3. approve the `production` environment if protection is configured;
 4. verify the Cloud Run health check and Cloudflare deployment in the workflow summary;
-5. generate one real route, confirm it appears in the private library, then test an unlisted share link and account sign-in email.
+5. sign in with Google, generate one real route, confirm it appears in the private library, then test an unlisted share link.
