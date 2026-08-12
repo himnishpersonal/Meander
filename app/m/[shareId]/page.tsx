@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { API } from "@/app/api";
 
-const API = (process.env.NEXT_PUBLIC_MEANDER_API_URL || "http://localhost:8080").replace(/\/$/, "");
 type Artwork = { id: string; title: string; subtitle: string; palette: string; preview_url: string; artwork_url: string; visibility: string; features?: { DistanceKM?: number; HardTurns?: number; DurationMinutes?: number }; score?: { Total?: number } };
 
 export default function SharedArtwork({ params }: { params: Promise<{ shareId: string }> }) {

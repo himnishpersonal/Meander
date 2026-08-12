@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { API } from "@/app/api";
 
-const API = (process.env.NEXT_PUBLIC_MEANDER_API_URL || "http://localhost:8080").replace(/\/$/, "");
 type Artwork = { id: string; share_id: string; title: string; subtitle: string; palette: string; visibility: "private" | "unlisted" | "public"; created_at: string; preview_url: string; share_url: string };
 
 export default function LibraryPage() {

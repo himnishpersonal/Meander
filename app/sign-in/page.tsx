@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-
-const API = (process.env.NEXT_PUBLIC_MEANDER_API_URL || "http://localhost:8080").replace(/\/$/, "");
+import { API } from "@/app/api";
 
 type GoogleCredentialResponse = { credential: string };
 type GoogleIdentity = {

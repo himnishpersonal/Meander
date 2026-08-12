@@ -86,28 +86,3 @@ jobs:
         env:
           API_URL: ${{ steps.deploy.outputs.url }}
         run: curl --fail --retry 5 --retry-all-errors --max-time 20 "$API_URL/healthz"
-
-  deploy-frontend:
-    name: Deploy Cloudflare frontend
-    needs: deploy-api
-    runs-on: ubuntu-latest
-    environment:
-      name: production
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run build
-        env:
-          NEXT_PUBLIC_MEANDER_API_URL: ${{ vars.MEANDER_API_ORIGIN }}
-          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.MEANDER_GOOGLE_CLIENT_ID }}
-      - id: deploy
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: 4.92.0
-          command: deploy --config dist/server/wrangler.json

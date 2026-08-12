@@ -8,8 +8,8 @@ This is the locked deployment plan for Meander. The repository contains the pipe
 Browser
   │
   ▼
-Cloudflare frontend
-  │  NEXT_PUBLIC_MEANDER_API_URL
+Vercel frontend
+  │  /api/* rewrite · same-origin browser session
   ▼
 Google Cloud Run · Go API + field engine
   ├── Neon Postgres · accounts and product records
@@ -17,7 +17,7 @@ Google Cloud Run · Go API + field engine
 
 GitHub Actions
   ├── pull request / main → lint, build, Go tests, vet, container build
-  └── release / manual → verify → Cloud Run → health check → Cloudflare
+  └── release / manual → verify → Cloud Run → health check
 ```
 
 The API now uses a storage interface. Development falls back to local files and an in-memory record store; production refuses to start unless Neon and R2 configuration are present. SVG, PNG, recipe, and fingerprint files are stored in R2, while Neon stores ownership, visibility, and searchable artwork metadata.
@@ -41,8 +41,7 @@ A failed check prevents the release pipeline from being considered healthy.
 2. authenticates to Google Cloud using short-lived OIDC credentials;
 3. deploys the `backend/Dockerfile` source to Cloud Run;
 4. calls `/healthz` and stops if the engine is unhealthy;
-5. rebuilds the frontend with the deployed Cloud Run URL;
-6. deploys the validated frontend to Cloudflare.
+5. Vercel deploys the frontend automatically from `main` through its GitHub integration.
 
 The production environment uses a concurrency lock, so two releases cannot deploy over each other. Configure GitHub's `production` environment with an approval rule if the repository plan supports it.
 
@@ -54,16 +53,14 @@ Environment secrets:
 
 - `GCP_WORKLOAD_IDENTITY_PROVIDER`
 - `GCP_SERVICE_ACCOUNT`
-- `CLOUDFLARE_API_TOKEN`
-- `CLOUDFLARE_ACCOUNT_ID`
 
 Environment variables:
 
 - `GCP_PROJECT_ID`
 - `GCP_REGION` — defaults to `us-east1`
 - `CLOUD_RUN_SERVICE` — defaults to `meander-api`
-- `MEANDER_WEB_ORIGIN` — exact production frontend origin used by API CORS, e.g. `https://meander.app`
-- `MEANDER_API_ORIGIN` — exact public API origin, e.g. `https://api.meander.app`; use a sibling subdomain of the frontend so browser sessions remain first-party
+- `MEANDER_WEB_ORIGIN` — exact Vercel frontend origin used by API CORS, e.g. `https://meander.vercel.app`
+- `MEANDER_API_ORIGIN` — exact Cloud Run origin used by the API, e.g. `https://meander-api-…run.app`
 - `MEANDER_GOOGLE_CLIENT_ID` — Google Identity Services web client ID, used by both the API and frontend
 - `R2_ACCOUNT_ID`
 - `R2_BUCKET`
@@ -83,5 +80,5 @@ The current safe sequence is:
 1. merge only after CI passes;
 2. publish a GitHub Release or manually start `Deploy production`;
 3. approve the `production` environment if protection is configured;
-4. verify the Cloud Run health check and Cloudflare deployment in the workflow summary;
+4. verify the Cloud Run health check and Vercel deployment;
 5. sign in with Google, generate one real route, confirm it appears in the private library, then test an unlisted share link.

@@ -1,13 +1,15 @@
-import { env } from "cloudflare:workers";
-import { drizzle } from "drizzle-orm/d1";
-import * as schema from "./schema";
+import type { drizzle } from "drizzle-orm/d1";
 
-export function getDb() {
-  if (!env.DB) {
-    throw new Error(
-      "Cloudflare D1 binding `DB` is unavailable. Set the `d1` field in .openai/hosting.json to `DB` or let your control plane inject the real binding values before using the database."
-    );
-  }
-
-  return drizzle(env.DB, { schema });
+/**
+ * Kept as a clear boundary for an unused starter-template module.
+ *
+ * Meander's product data lives in Neon and is accessed by the Go API. The
+ * browser app must never open a database connection directly. Leaving the
+ * former Cloudflare D1 import here made a Vercel/Next production build depend
+ * on Cloudflare-only types, even though no application code uses this module.
+ */
+export function getDb(): ReturnType<typeof drizzle> {
+  throw new Error(
+    "The frontend does not access a database directly. Use the Meander Go API."
+  );
 }

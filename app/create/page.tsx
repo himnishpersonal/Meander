@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
+import { API } from "@/app/api";
 
 type Generation = {
   id: string;
@@ -17,7 +18,6 @@ type Generation = {
 };
 type QualityScore = { Total: number; NegativeSpace: number; Hierarchy: number; RouteLegibility: number; ColorStructure: number; AccentDiscipline: number; FocalStrength: number; HeroSupport: number; AnchorStrength: number };
 
-const API = (process.env.NEXT_PUBLIC_MEANDER_API_URL || "http://localhost:8080").replace(/\/$/, "");
 const samples = [
   { file: "central-park.osm", name: "Central Park", place: "New York" },
   { file: "high-line.osm", name: "The High Line", place: "New York" },
