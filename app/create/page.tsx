@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { API } from "@/app/api";
+import { BrandMark } from "@/app/brand-mark";
 
 type Generation = {
   id: string;
@@ -65,7 +66,7 @@ export default function CreatePage() {
   }
 
   return <main className="studio-page">
-    <header className="site-header studio-header"><Link className="brand" href="/"><span className="brand-line" />Meander</Link><span>CREATION STUDIO · LIVE GO ENGINE</span><Link className="nav-cta" href="/library">My library <span>↗</span></Link></header>
+    <header className="site-header studio-header"><Link className="brand" href="/"><BrandMark />Meander</Link><span>CREATION STUDIO · LIVE GO ENGINE</span><Link className="nav-cta" href="/library">My library <span>↗</span></Link></header>
     <section className="studio-intro"><p className="section-kicker">Route in. Turbulence out.</p><h1>Your movement<br />makes the system.</h1><p>Upload a GPX track or test public geometry. The route drives the entire field, while a restrained broken path keeps the walk discoverable inside the abstraction.</p></section>
     <section className="studio-workspace">
       <form className="studio-controls" onSubmit={submit}>

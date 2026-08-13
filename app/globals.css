@@ -32,3 +32,8 @@
 .auth-required strong{font-size:14px}
 .auth-required p{margin:7px 0 13px;font-size:12px;line-height:1.45;color:#59675e}
 .auth-required a{display:inline-flex;gap:14px;padding:10px 13px;border-radius:999px;background:var(--forest);color:var(--white);text-decoration:none;font:500 9px 'IBM Plex Mono',monospace}
+
+.brand-line{display:block;width:30px;height:30px;flex:none;border:0;border-radius:0;transform:none;background:url('/icon.svg') center/contain no-repeat}
+.brand-line:after{display:none}
+.brand-mark{display:block;width:30px;height:30px;flex:none;color:var(--forest)}
+footer .brand-mark{color:var(--white)}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { BrandMark } from "@/app/brand-mark";
 
 type Stage = "route" | "fingerprint" | "compose" | "canonical";
 
@@ -161,7 +162,7 @@ export default function Home() {
   return (
     <main id="top">
       <header className="site-header">
-        <a className="brand" href="#top" aria-label="Meander home"><span className="brand-line" />Meander</a>
+        <a className="brand" href="#top" aria-label="Meander home"><BrandMark />Meander</a>
         <nav aria-label="Main navigation"><a href="#how-it-works">How it works</a><a href="#fingerprint">The data</a><a href="#gallery">Prints</a><a href="/library">Library</a></nav>
         <a className="nav-cta" href="/create">Create from a route <span>↗</span></a>
       </header>
@@ -238,7 +239,7 @@ export default function Home() {
         <p className="next-view">READY NOW · GPX UPLOAD · ENGINE ANALYSIS · SVG + PNG OUTPUT</p>
       </section>
 
-      <footer><a className="brand" href="#top"><span className="brand-line" />Meander</a><p>The geometry of going somewhere.</p><div><a href="#how-it-works">Process</a><a href="#fingerprint">Data</a><a href="#gallery">Prints</a></div><small>© 2026 MEANDER · LOCATION DATA STAYS PRIVATE</small></footer>
+      <footer><a className="brand" href="#top"><BrandMark />Meander</a><p>The geometry of going somewhere.</p><div><a href="#how-it-works">Process</a><a href="#fingerprint">Data</a><a href="#gallery">Prints</a></div><small>© 2026 MEANDER · LOCATION DATA STAYS PRIVATE</small></footer>
     </main>
   );
 }
