@@ -99,7 +99,7 @@ func (s server) routes() http.Handler {
 func (s server) publicConfig(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"google_sign_in_configured": s.googleClientID != "",
-		"google_client_id":            s.googleClientID,
+		"google_client_id":          s.googleClientID,
 	})
 }
 
@@ -142,7 +142,11 @@ func (s server) issueSession(w http.ResponseWriter, r *http.Request, user produc
 		fail(w, 500, err)
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: "meander_session", Value: session, Path: "/", HttpOnly: true, Secure: s.environment == "production", SameSite: http.SameSiteLaxMode, MaxAge: 30 * 24 * 60 * 60})
+	sameSite := http.SameSiteLaxMode
+	if s.environment == "production" {
+		sameSite = http.SameSiteNoneMode
+	}
+	http.SetCookie(w, &http.Cookie{Name: "meander_session", Value: session, Path: "/", HttpOnly: true, Secure: s.environment == "production", SameSite: sameSite, MaxAge: 30 * 24 * 60 * 60})
 	writeJSON(w, http.StatusCreated, map[string]any{"user": user})
 }
 

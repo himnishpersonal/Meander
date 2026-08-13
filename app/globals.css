@@ -37,3 +37,9 @@
 .brand-line:after{display:none}
 .brand-mark{display:block;width:30px;height:30px;flex:none;color:var(--forest)}
 footer .brand-mark{color:var(--white)}
+
+.auth-progress{display:flex;align-items:center;gap:14px;margin:24px 0 8px;padding:14px 16px;border:1px solid rgba(23,55,43,.16);border-radius:12px;background:#e6e9e2;color:var(--forest)}
+.auth-progress>span{width:24px;height:24px;flex:none;border:2px solid rgba(23,55,43,.24);border-top-color:var(--clay);border-radius:50%;animation:auth-spin .8s linear infinite}
+.auth-progress.complete>span{display:grid;place-items:center;border:0;background:var(--forest);color:var(--white);animation:none;font-size:12px}
+.auth-progress strong{font-size:13px}.auth-progress p{margin:3px 0 0!important;font:400 9px/1.4 'IBM Plex Mono',monospace!important;color:#66736a!important}
+@keyframes auth-spin{to{transform:rotate(360deg)}}

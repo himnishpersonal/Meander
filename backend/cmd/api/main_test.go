@@ -136,3 +136,19 @@ func TestGoogleSignInCreatesSession(t *testing.T) {
 		t.Fatalf("Google session did not identify user: %d %s", meRec.Code, meRec.Body.String())
 	}
 }
+
+func TestProductionGoogleSessionCookieSupportsFrontendProxy(t *testing.T) {
+	s := server{store: product.NewMemoryStore(), objects: product.LocalObjects{Root: t.TempDir()}, environment: "production", googleClientID: "google-client", verifyGoogle: func(_ context.Context, _, _ string) (googleIdentity, error) {
+		return googleIdentity{Email: "walker@example.com", Name: "Trail Walker"}, nil
+	}}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/google", bytes.NewBufferString(`{"credential":"trusted-google-token"}`))
+	rec := httptest.NewRecorder()
+	s.routes().ServeHTTP(rec, req)
+	cookies := rec.Result().Cookies()
+	if rec.Code != http.StatusCreated || len(cookies) != 1 {
+		t.Fatalf("expected production session cookie, got %d %#v", rec.Code, cookies)
+	}
+	if !cookies[0].Secure || cookies[0].SameSite != http.SameSiteNoneMode || !cookies[0].HttpOnly {
+		t.Fatalf("production cookie must be cross-site compatible and protected: %#v", cookies[0])
+	}
+}
