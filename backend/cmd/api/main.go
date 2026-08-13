@@ -198,6 +198,15 @@ func (s server) generate(w http.ResponseWriter, r *http.Request) {
 		fail(w, 422, err)
 		return
 	}
+	if r.FormValue("geometry_only") == "true" {
+		result.Features.DistanceKM = 0
+		result.Features.DisplacementKM = 0
+		result.Features.DurationMinutes = 0
+		result.Features.MeanPaceMinKM = 0
+		result.Features.ElevationGainM = 0
+		result.Features.TimedPoints = 0
+		result.Subtitle = "Geometry-only route · " + strings.ToLower(clean(r.FormValue("time_of_day")))
+	}
 	artwork, err := s.persistArtwork(r.Context(), user, result)
 	if err != nil {
 		fail(w, 500, err)
@@ -354,7 +363,7 @@ func (s server) file(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s server) artworkResponse(a product.Artwork, features engine.Features, events []engine.RouteEvent, recipe engine.Recipe) map[string]any {
-	return map[string]any{"id": a.ID, "share_id": a.ShareID, "title": a.Title, "subtitle": a.Subtitle, "palette": a.Palette, "family": "route-turbulence", "features": features, "events": events, "recipe": recipe, "score": recipe.Score, "visibility": a.Visibility, "artwork_url": "/api/v1/artworks/" + a.ID + "/files/svg", "preview_url": "/api/v1/artworks/" + a.ID + "/files/png"}
+	return map[string]any{"id": a.ID, "share_id": a.ShareID, "share_url": "/m/" + a.ShareID, "title": a.Title, "subtitle": a.Subtitle, "palette": a.Palette, "family": "route-turbulence", "features": features, "events": events, "recipe": recipe, "score": recipe.Score, "visibility": a.Visibility, "artwork_url": "/api/v1/artworks/" + a.ID + "/files/svg", "preview_url": "/api/v1/artworks/" + a.ID + "/files/png"}
 }
 
 func artworkSummary(a product.Artwork) map[string]any {

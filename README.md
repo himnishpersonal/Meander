@@ -11,6 +11,7 @@ Deployment and release plumbing is documented in [`docs/DEPLOYMENT.md`](docs/DEP
 ## Current capabilities
 
 - GPX and OSM XML route import
+- PNG, JPEG, and WebP screenshot tracing as a geometry-only route source
 - Public sample routes for local testing
 - Route-wide feature extraction and local movement-event detection
 - Deterministic route-turbulence generation in Go
@@ -23,9 +24,10 @@ Deployment and release plumbing is documented in [`docs/DEPLOYMENT.md`](docs/DEP
 - Global cold-start calibration from the first upload
 - One canonical SVG and PNG result
 - Explainable fingerprint, recipe, and named quality scores
-- Local creation studio and landing page
+- Google accounts, private artwork storage, share controls, and an artwork library
+- Production creation studio with staged progress and recovery states
 
-Meander does not currently have accounts, Strava OAuth, persistent user history, an artwork library, webhooks, or personal learning. Those belong to the next product phase.
+Meander does not currently have Strava OAuth, webhooks, or personal learning. Those remain separate future product phases.
 
 ## How the engine works
 
@@ -149,6 +151,7 @@ Directional quality targets a middle alignment band. Maximum alignment is not id
 | Input | Required | Influence |
 |---|---|---|
 | Route geometry | Yes | Structure, direction, events, fingerprint, deterministic identity |
+| Screenshot trace | Alternative | Geometry-only structure and direction; no invented distance, elevation, pace, or time data |
 | Location label | No | Display title and deterministic identity |
 | Time of day | No | Base hue region |
 | Music tempo | No | Deterministic identity; deeper rhythmic modulation is future work |
