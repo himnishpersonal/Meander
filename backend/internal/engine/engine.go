@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-const Version = "field-3.2.0"
+const Version = "field-3.2.1"
 
 type GeoPoint struct {
 	Lat, Lon, Elevation float64
@@ -50,6 +50,7 @@ type Features struct {
 type Score struct {
 	Total, Coverage, Balance, NegativeSpace, Hierarchy, RouteLegibility, EdgeSafety, Complexity float64
 	ColorStructure, AccentDiscipline, FocalStrength, HeroSupport, AnchorStrength                float64
+	RouteVisibility, CoreFlowCoherence, CollisionRate, BundleContinuity, TopologyPreservation   float64
 }
 type RouteEvent struct {
 	Kind     string  `json:"kind"`

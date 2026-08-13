@@ -36,6 +36,11 @@ func chooseCanonical(candidates []turbulenceCandidate) (turbulenceCandidate, boo
 		return turbulenceCandidate{}, false
 	}
 	sort.SliceStable(candidates, func(i, j int) bool { return candidates[i].score.Total > candidates[j].score.Total })
+	for _, candidate := range candidates {
+		if candidate.score.RouteVisibility >= .72 && candidate.score.CoreFlowCoherence >= .68 && candidate.score.CollisionRate <= .32 && candidate.score.TopologyPreservation == 1 {
+			return candidate, true
+		}
+	}
 	return candidates[0], true
 }
 
@@ -114,10 +119,52 @@ func makeTurbulence(route []Point, events []RouteEvent, f Features, c Context, s
 	}
 	anchor := chooseCompositionAnchor(route, events, profile)
 	composition := classifyTrails(lines, route, anchor, profile)
-	// A restrained, interrupted route-memory keeps the source walk discoverable
-	// without allowing the GPS trace to dominate the field.
-	lines = append(lines, Line{Points: route, Width: .72, Opacity: .22, Role: "route-memory", Texture: "route-memory", ColorRole: 1})
+	lines = protectRouteCorridor(lines, route)
+	// The original route remains integrated with the field, but is painted last
+	// as a soft chromatic under-stroke plus a crisp interrupted memory line.
+	lines = append(lines,
+		Line{Points: route, Width: 2.65, Opacity: .11, Role: "route-memory-underlay", Texture: "route-underlay", ColorRole: 2},
+		Line{Points: route, Width: 1.55, Opacity: .36, Role: "route-memory", Texture: "route-memory", ColorRole: 4},
+	)
 	return lines, composition
+}
+
+func protectRouteCorridor(lines []Line, route []Point) []Line {
+	for i := range lines {
+		if strings.HasPrefix(lines[i].Role, "route") || lines[i].Role == "event-fragment" {
+			continue
+		}
+		near := lineRouteAffinity(lines[i], route, .045)
+		if near < .18 {
+			continue
+		}
+		// Dense marks may still exist, but no single generated ribbon is allowed
+		// to become an opaque blob over the walk.
+		switch lines[i].Role {
+		case "hero":
+			lines[i].Width = math.Min(lines[i].Width, 6.2)
+			lines[i].Opacity = math.Min(lines[i].Opacity, .58)
+		case "supporting":
+			lines[i].Width = math.Min(lines[i].Width, 3.4)
+			lines[i].Opacity = math.Min(lines[i].Opacity, .42)
+		default:
+			lines[i].Width = math.Min(lines[i].Width, 2.1)
+			lines[i].Opacity = math.Min(lines[i].Opacity, .3)
+		}
+	}
+	return lines
+}
+
+func lineRouteAffinity(line Line, route []Point, radius float64) float64 {
+	near, samples := 0, 0
+	for i := 0; i < len(line.Points); i += 5 {
+		closest, _ := nearestRoute(line.Points[i], route)
+		if dist(line.Points[i], closest) <= radius {
+			near++
+		}
+		samples++
+	}
+	return float64(near) / math.Max(1, float64(samples))
 }
 
 func chooseCompositionAnchor(route []Point, events []RouteEvent, profile CalibrationProfile) CompositionAnchor {
@@ -267,8 +314,12 @@ func turbulenceVector(p Point, route []Point, events []RouteEvent, wild float64,
 	angle := c1*.82 + c2*.34 + c3*.1
 	d := dist(p, near)
 	routePull := math.Exp(-d * d / .028)
-	vx := tx*(.18+.78*routePull) + gx*.26 + math.Cos(angle*math.Pi)*wild*.72
-	vy := ty*(.18+.78*routePull) + gy*.26 + math.Sin(angle*math.Pi)*wild*.72
+	// Close to the walk, neighboring strokes inherit a shared tangent and flow
+	// as bundles. Turbulence returns gradually with distance, preserving the
+	// freer outside behavior of the original engine.
+	curl := wild * .72 * (1 - .76*routePull)
+	vx := tx*(.18+1.34*routePull) + gx*(.16+.1*(1-routePull)) + math.Cos(angle*math.Pi)*curl
+	vy := ty*(.18+1.34*routePull) + gy*(.16+.1*(1-routePull)) + math.Sin(angle*math.Pi)*curl
 	stress := 0.0
 	for _, e := range events {
 		dx, dy := p.X-e.Position.X, p.Y-e.Position.Y
@@ -423,9 +474,96 @@ func scoreTurbulence(lines []Line, route []Point, composition Composition, profi
 	base.FocalStrength = round(focal)
 	base.HeroSupport = round(heroSupport)
 	base.AnchorStrength = round(anchorStrength)
+	routeVisibility, coreCoherence, collisionRate, continuity := scoreRouteCorridor(lines, route)
+	base.RouteVisibility = round(routeVisibility)
+	base.CoreFlowCoherence = round(coreCoherence)
+	base.CollisionRate = round(collisionRate)
+	base.BundleContinuity = round(continuity)
+	base.TopologyPreservation = round(topologyPreservation(lines, route))
 	w := profile.Weights
-	base.Total = round(w.NegativeSpace*base.NegativeSpace + w.Hierarchy*base.Hierarchy + w.Direction*directionalQuality + w.ColorStructure*colorStructure + w.AccentDiscipline*accent + w.FocalStrength*focal + w.HeroSupport*heroSupport + w.AnchorStrength*anchorStrength + w.EdgeSafety*base.EdgeSafety + w.Balance*base.Balance)
+	legacyTotal := w.NegativeSpace*base.NegativeSpace + w.Hierarchy*base.Hierarchy + w.Direction*directionalQuality + w.ColorStructure*colorStructure + w.AccentDiscipline*accent + w.FocalStrength*focal + w.HeroSupport*heroSupport + w.AnchorStrength*anchorStrength + w.EdgeSafety*base.EdgeSafety + w.Balance*base.Balance
+	base.Total = round(.78*legacyTotal + .09*routeVisibility + .07*coreCoherence + .035*continuity + .025*(1-collisionRate))
 	return base
+}
+
+func scoreRouteCorridor(lines []Line, route []Point) (float64, float64, float64, float64) {
+	const gridSize = 22
+	type directionCell struct {
+		x, y  float64
+		count int
+	}
+	grid := make([]directionCell, gridSize*gridSize)
+	alignment, segments, continuity, bundles := 0.0, 0, 0.0, 0
+	routeOpacity := 0.0
+	for _, line := range lines {
+		if strings.HasPrefix(line.Role, "route") {
+			routeOpacity = math.Max(routeOpacity, line.Opacity)
+			continue
+		}
+		alignedRun, longestRun := 0, 0
+		for i := 1; i < len(line.Points); i += 3 {
+			a := line.Points[i-1]
+			closest, index := nearestRoute(a, route)
+			if dist(a, closest) > .12 {
+				alignedRun = 0
+				continue
+			}
+			b := line.Points[i]
+			dx, dy := b.X-a.X, b.Y-a.Y
+			magnitude := math.Hypot(dx, dy)
+			ra, rb := route[max(0, index-2)], route[min(len(route)-1, index+2)]
+			rx, ry := rb.X-ra.X, rb.Y-ra.Y
+			routeMagnitude := math.Hypot(rx, ry)
+			if magnitude == 0 || routeMagnitude == 0 {
+				continue
+			}
+			dot := math.Abs((dx*rx + dy*ry) / (magnitude * routeMagnitude))
+			alignment += dot
+			segments++
+			if dot >= .72 {
+				alignedRun++
+				longestRun = max(longestRun, alignedRun)
+			} else {
+				alignedRun = 0
+			}
+			if a.X >= 0 && a.X < 1 && a.Y >= 0 && a.Y < 1 {
+				cell := &grid[int(a.Y*gridSize)*gridSize+int(a.X*gridSize)]
+				angle := math.Atan2(dy, dx) * 2
+				cell.x += math.Cos(angle)
+				cell.y += math.Sin(angle)
+				cell.count++
+			}
+		}
+		if longestRun > 0 {
+			continuity += clamp(float64(longestRun)/12, 0, 1)
+			bundles++
+		}
+	}
+	conflict, occupied := 0.0, 0
+	for _, cell := range grid {
+		if cell.count < 2 {
+			continue
+		}
+		coherence := math.Hypot(cell.x, cell.y) / float64(cell.count)
+		conflict += 1 - coherence
+		occupied++
+	}
+	core := alignment / math.Max(1, float64(segments))
+	collision := conflict / math.Max(1, float64(occupied))
+	visibility := clamp(.55*(routeOpacity/.4)+.45*(1-collision), 0, 1)
+	return visibility, core, collision, continuity / math.Max(1, float64(bundles))
+}
+
+func topologyPreservation(lines []Line, route []Point) float64 {
+	for _, line := range lines {
+		if line.Role != "route-memory" || len(line.Points) != len(route) {
+			continue
+		}
+		if dist(line.Points[0], route[0]) == 0 && dist(line.Points[len(line.Points)-1], route[len(route)-1]) == 0 {
+			return 1
+		}
+	}
+	return 0
 }
 
 func routePalette(c Context, seed uint64) (string, [6]color.RGBA) {

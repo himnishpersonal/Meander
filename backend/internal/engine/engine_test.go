@@ -29,11 +29,11 @@ func TestDeterministic(t *testing.T) {
 	if len(a.Lines) < 100 {
 		t.Fatalf("expected field lines, got %d", len(a.Lines))
 	}
-	if a.Family != "route-turbulence" || a.Recipe.EngineVersion != "field-3.2.0" {
+	if a.Family != "route-turbulence" || a.Recipe.EngineVersion != "field-3.2.1" {
 		t.Fatalf("wrong v3 identity: %#v", a.Recipe)
 	}
 	score := a.Recipe.Score
-	if score.NegativeSpace == 0 || score.Hierarchy == 0 || score.RouteLegibility == 0 || score.ColorStructure == 0 || score.AccentDiscipline == 0 || score.FocalStrength == 0 || score.HeroSupport == 0 || score.AnchorStrength == 0 {
+	if score.NegativeSpace == 0 || score.Hierarchy == 0 || score.RouteLegibility == 0 || score.ColorStructure == 0 || score.AccentDiscipline == 0 || score.FocalStrength == 0 || score.HeroSupport == 0 || score.AnchorStrength == 0 || score.RouteVisibility == 0 || score.CoreFlowCoherence == 0 || score.BundleContinuity == 0 || score.TopologyPreservation != 1 {
 		t.Fatalf("missing named quality metrics: %#v", score)
 	}
 	textures := map[string]bool{}
@@ -44,11 +44,14 @@ func TestDeterministic(t *testing.T) {
 			t.Fatal("v3 must not render a literal route line")
 		}
 		if line.Role == "route-memory" {
-			routeMemory = line.Opacity > 0 && line.Opacity <= .25 && line.Texture == "route-memory"
+			routeMemory = line.Opacity >= .3 && line.Opacity <= .4 && line.Width >= 1.4 && line.ColorRole != 1 && line.Texture == "route-memory"
 		}
 	}
 	if !routeMemory {
-		t.Fatal("expected a restrained visible route-memory layer")
+		t.Fatal("expected a strengthened visible route-memory layer")
+	}
+	if score.RouteVisibility < .72 || score.CoreFlowCoherence < .68 || score.CollisionRate > .32 {
+		t.Fatalf("route corridor quality gate failed: %#v", score)
 	}
 	for _, texture := range []string{"ribbon", "broken", "thread", "dry-brush", "charcoal"} {
 		if !textures[texture] {

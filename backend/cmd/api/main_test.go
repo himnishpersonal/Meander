@@ -53,7 +53,7 @@ func TestGenerateReturnsOneCanonicalArtwork(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
 		t.Fatal(err)
 	}
-	if response.Recipe.EngineVersion != "field-3.2.0" || response.Recipe.CalibrationProfile != "walk-art-v1" || response.Recipe.Composition.HeroTrails == 0 || response.Recipe.Composition.SupportingTrails == 0 || response.Family != "route-turbulence" || response.ArtworkURL == "" {
+	if response.Recipe.EngineVersion != "field-3.2.1" || response.Recipe.CalibrationProfile != "walk-art-v1" || response.Recipe.Composition.HeroTrails == 0 || response.Recipe.Composition.SupportingTrails == 0 || response.Family != "route-turbulence" || response.ArtworkURL == "" {
 		t.Fatalf("bad v3 contract: %#v", response)
 	}
 	if bytes.Contains(rec.Body.Bytes(), []byte(`"finalists"`)) {

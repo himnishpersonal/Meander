@@ -2,7 +2,7 @@
 
 The Go backend parses recorded routes, extracts a movement fingerprint, builds and scores deterministic route-turbulence compositions, renders one canonical SVG/PNG result, and exposes the process through a local HTTP API.
 
-Current engine: `field-3.2.0`  
+Current engine: `field-3.2.1`
 Calibration profile: `walk-art-v1`
 
 ## Design invariants
