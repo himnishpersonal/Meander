@@ -20,7 +20,23 @@ export default function SignInPage() {
   const button = useRef<HTMLDivElement>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const clientID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const [clientID, setClientID] = useState(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "");
+  const [configurationLoaded, setConfigurationLoaded] = useState(Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID));
+
+  useEffect(() => {
+    if (clientID) return;
+    let mounted = true;
+    fetch(`${API}/api/v1/config`)
+      .then(async (response) => {
+        const body = await response.json();
+        if (!response.ok) throw new Error("Configuration unavailable");
+        return body as { google_client_id?: string };
+      })
+      .then((body) => { if (mounted) setClientID(body.google_client_id || ""); })
+      .catch(() => { if (mounted) setError("Google Sign-In configuration could not be loaded. Please try again shortly."); })
+      .finally(() => { if (mounted) setConfigurationLoaded(true); });
+    return () => { mounted = false; };
+  }, [clientID]);
 
   useEffect(() => {
     if (!clientID) {
@@ -67,5 +83,5 @@ export default function SignInPage() {
     return () => { mounted = false; };
   }, [clientID]);
 
-  return <main className="sign-in-page"><header className="site-header"><Link className="brand" href="/"><span className="brand-line" />Meander</Link><Link className="nav-cta" href="/create">Create first <span>↗</span></Link></header><section className="sign-in-card"><p className="section-kicker">Save your work</p><h1>Sign in to<br />keep moving.</h1><p>Use your Google account to save your walks, keep artwork private, and connect Strava when it arrives.</p><div className="google-sign-in" ref={button} aria-label="Continue with Google" />{message && <p className="auth-message">{message}</p>}{(error || !clientID) && <p className="engine-error">{error || "Google Sign-In is not configured on this device yet."}</p>}<small>Meander only uses your Google identity to create your account. Your activity data stays separate and is only connected when you choose Strava.</small></section></main>;
+  return <main className="sign-in-page"><header className="site-header"><Link className="brand" href="/"><span className="brand-line" />Meander</Link><Link className="nav-cta" href="/create">Create first <span>↗</span></Link></header><section className="sign-in-card"><p className="section-kicker">Save your work</p><h1>Sign in to<br />keep moving.</h1><p>Use your Google account to save your walks, keep artwork private, and connect Strava when it arrives.</p><div className="google-sign-in" ref={button} aria-label="Continue with Google" />{!configurationLoaded && <p className="auth-message">Loading secure sign-in…</p>}{message && <p className="auth-message">{message}</p>}{error && <p className="engine-error">{error}</p>}{configurationLoaded && !clientID && !error && <p className="engine-error">Google Sign-In is still being connected. Please try again shortly.</p>}<small>Meander only uses your Google identity to create your account. Your activity data stays separate and is only connected when you choose Strava.</small></section></main>;
 }

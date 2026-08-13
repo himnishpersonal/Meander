@@ -90,6 +90,26 @@ func TestProductionCORSUsesAllowList(t *testing.T) {
 	}
 }
 
+func TestPublicConfigReportsGoogleSignIn(t *testing.T) {
+	s := server{googleClientID: "public-client.apps.googleusercontent.com"}
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/config", nil)
+	rec := httptest.NewRecorder()
+	s.routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !bytes.Contains(rec.Body.Bytes(), []byte(`"google_sign_in_configured":true`)) || !bytes.Contains(rec.Body.Bytes(), []byte(`"google_client_id":"public-client.apps.googleusercontent.com"`)) {
+		t.Fatalf("unexpected public config: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestProductionGenerateRequiresSignIn(t *testing.T) {
+	s := server{store: product.NewMemoryStore(), environment: "production"}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/generate", nil)
+	rec := httptest.NewRecorder()
+	s.routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized || !bytes.Contains(rec.Body.Bytes(), []byte("sign in is required")) {
+		t.Fatalf("expected authentication response, got %d %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestGoogleSignInCreatesSession(t *testing.T) {
 	s := server{store: product.NewMemoryStore(), objects: product.LocalObjects{Root: t.TempDir()}, environment: "development", googleClientID: "google-client", verifyGoogle: func(_ context.Context, credential, audience string) (googleIdentity, error) {
 		if credential != "trusted-google-token" || audience != "google-client" {

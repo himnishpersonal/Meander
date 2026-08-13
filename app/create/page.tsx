@@ -35,21 +35,27 @@ export default function CreatePage() {
   const [result, setResult] = useState<Generation | null>(null);
   const [status, setStatus] = useState<"idle" | "working" | "error">("idle");
   const [error, setError] = useState("");
+  const [authRequired, setAuthRequired] = useState(false);
   const artwork = result ? `${API}${result.artwork_url}` : "/generated/central-park.svg";
 
   async function submit(event: FormEvent) {
-    event.preventDefault(); setStatus("working"); setError("");
+    event.preventDefault(); setStatus("working"); setError(""); setAuthRequired(false);
     const data = new FormData();
     if (route) data.append("route", route); else data.append("sample", sample);
     data.append("location_label", location || route?.name.replace(/\.[^.]+$/, "") || "Untitled walk");
     data.append("time_of_day", time); data.append("music_tempo", tempo); data.append("music_energy", energy);
     try {
-      const response = await fetch(`${API}/api/v1/generate`, { method: "POST", body: data });
-      const body = await response.json();
+      const response = await fetch(`${API}/api/v1/generate`, { method: "POST", credentials: "include", body: data });
+      const body = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        setAuthRequired(true);
+        setStatus("idle");
+        return;
+      }
       if (!response.ok) throw new Error(body.error || "The engine could not read that route.");
       setResult({ ...body, events: Array.isArray(body.events) ? body.events : [], features: body.features || {} }); setStatus("idle");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The local engine is unavailable."); setStatus("error");
+      setError(reason instanceof Error ? reason.message : "Meander could not reach the generation service."); setStatus("error");
     }
   }
 
@@ -59,7 +65,7 @@ export default function CreatePage() {
   }
 
   return <main className="studio-page">
-    <header className="site-header studio-header"><Link className="brand" href="/"><span className="brand-line" />Meander</Link><span>LOCAL CREATION STUDIO · GO ENGINE</span><Link className="nav-cta" href="/library">My library <span>↗</span></Link></header>
+    <header className="site-header studio-header"><Link className="brand" href="/"><span className="brand-line" />Meander</Link><span>CREATION STUDIO · LIVE GO ENGINE</span><Link className="nav-cta" href="/library">My library <span>↗</span></Link></header>
     <section className="studio-intro"><p className="section-kicker">Route in. Turbulence out.</p><h1>Your movement<br />makes the system.</h1><p>Upload a GPX track or test public geometry. The route drives the entire field, while a restrained broken path keeps the walk discoverable inside the abstraction.</p></section>
     <section className="studio-workspace">
       <form className="studio-controls" onSubmit={submit}>
@@ -68,7 +74,8 @@ export default function CreatePage() {
         <div className="control-block context-grid"><div><span className="control-number">03</span><label htmlFor="time">Time of day <small>Optional</small></label><select id="time" value={time} onChange={(event) => setTime(event.target.value)}><option>morning</option><option>afternoon</option><option>evening</option><option>night</option><option>dawn</option></select></div><div><span className="control-number">04</span><label htmlFor="tempo">Music tempo <small>BPM</small></label><input id="tempo" type="number" min="40" max="220" value={tempo} onChange={(event) => setTempo(event.target.value)} /></div></div>
         <div className="control-block"><span className="control-number">05</span><label htmlFor="energy">Music energy <small>{Math.round(Number(energy) * 100)}%</small></label><input id="energy" type="range" min="0" max="1" step="0.01" value={energy} onChange={(event) => setEnergy(event.target.value)} /></div>
         <button className="generate-button" disabled={status === "working"}>{status === "working" ? "Searching 28 private drafts…" : "Generate the artwork"}<span>→</span></button>
-        {error && <p className="engine-error"><strong>Engine unavailable.</strong> {error}<br />Start the local Go API on port 8080 and try again.</p>}
+        {authRequired && <div className="auth-required"><strong>Sign in to generate your artwork.</strong><p>Your route is ready. Sign in with Google, then return here to create and save the result privately.</p><Link href="/sign-in?returnTo=/create">Continue with Google <span>↗</span></Link></div>}
+        {error && <p className="engine-error"><strong>Generation paused.</strong> {error}<br />Please try again in a moment.</p>}
         <p className="privacy-note">Your uploaded file is processed in memory. The local engine stores only the resulting art and fingerprint—not the raw route.</p>
       </form>
       <div className="studio-output">
@@ -77,6 +84,6 @@ export default function CreatePage() {
         {result && <><div className="result-metrics"><div><span>Direction</span><strong>{result.recipe.score.RouteLegibility.toFixed(3)}</strong></div><div><span>Color structure</span><strong>{result.recipe.score.ColorStructure.toFixed(3)}</strong></div><div><span>Focal strength</span><strong>{result.recipe.score.FocalStrength.toFixed(3)}</strong></div><div><span>Quality</span><strong>{result.recipe.score.Total.toFixed(3)}</strong></div></div><div className="movement-readout"><span>ROUTE FINGERPRINT</span><p>{result.events?.length ?? 0} local movement events detected · {result.features.DwellPoints || 0} pauses · {result.features.PaceChanges || 0} pace changes · {Number(result.features.ElevationGainM || 0).toFixed(0)} m climbing</p></div></>}
       </div>
     </section>
-    <footer className="studio-footer"><p>One walk · one canonical artwork · globally calibrated from upload one</p><small>ENGINE field-3.2.0 · WALK-ART-V1 · LOCAL ONLY</small></footer>
+    <footer className="studio-footer"><p>One walk · one canonical artwork · globally calibrated from upload one</p><small>ENGINE field-3.2.0 · WALK-ART-V1 · CLOUD RUN</small></footer>
   </main>;
 }

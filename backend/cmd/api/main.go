@@ -80,6 +80,7 @@ func (s server) routes() http.Handler {
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, map[string]string{"status": "ok", "engine": engine.Version, "environment": s.environment})
 	})
+	mux.HandleFunc("GET /api/v1/config", s.publicConfig)
 	mux.HandleFunc("GET /api/v1/samples", s.samples)
 	mux.HandleFunc("POST /api/v1/auth/google", s.googleSignIn)
 	mux.HandleFunc("POST /api/v1/auth/logout", s.logout)
@@ -93,6 +94,13 @@ func (s server) routes() http.Handler {
 	mux.HandleFunc("GET /api/v1/share/{shareID}", s.sharedArtwork)
 	mux.Handle("GET /artifacts/", http.StripPrefix("/artifacts/", http.FileServer(http.Dir(s.output))))
 	return cors(mux)
+}
+
+func (s server) publicConfig(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{
+		"google_sign_in_configured": s.googleClientID != "",
+		"google_client_id":            s.googleClientID,
+	})
 }
 
 func (s server) googleSignIn(w http.ResponseWriter, r *http.Request) {
