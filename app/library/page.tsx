@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { AccountNav } from "@/app/account-nav";
 import { API } from "@/app/api";
 
 type Artwork = { id: string; share_id: string; title: string; subtitle: string; palette: string; visibility: "private" | "unlisted" | "public"; created_at: string; preview_url: string; share_url: string };
@@ -9,7 +10,31 @@ type Artwork = { id: string; share_id: string; title: string; subtitle: string; 
 export default function LibraryPage() {
   const [artworks, setArtworks] = useState<Artwork[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  useEffect(() => { fetch(`${API}/api/v1/me/artworks`, { credentials: "include" }).then(async (response) => { if (!response.ok) throw new Error(); return response.json(); }).then((body) => { setArtworks(body.artworks || []); setStatus("ready"); }).catch(() => setStatus("error")); }, []);
-  async function changeVisibility(id: string, visibility: Artwork["visibility"]) { const response = await fetch(`${API}/api/v1/artworks/${id}`, { method:"PATCH", credentials:"include", headers:{"Content-Type":"application/json"}, body:JSON.stringify({visibility}) }); if (response.ok) setArtworks((items) => items.map((item) => item.id === id ? {...item, visibility} : item)); }
-  return <main className="library-page"><header className="site-header"><Link className="brand" href="/"><span className="brand-line" />Meander</Link><nav aria-label="Main navigation"><Link href="/create">Create</Link><Link href="/library">Library</Link></nav><Link className="nav-cta" href="/sign-in">Sign in <span>↗</span></Link></header><section className="library-intro"><p className="section-kicker">Your library</p><h1>Walks you<br />made <span>yours.</span></h1><p>Each work is saved with its engine recipe and movement fingerprint. Set its privacy, share it, or download it whenever you want.</p></section><section className="library-content">{status === "loading" && <p className="library-state">Loading your Meanders…</p>}{status === "error" && <div className="library-state"><strong>Sign in to see your library.</strong><p>Your saved artworks remain private. We’ll use a secure passwordless email link to bring you back here.</p><Link className="primary-action" href="/sign-in">Send sign-in link <span>↗</span></Link></div>}{status === "ready" && artworks.length === 0 && <div className="library-state"><strong>Your first walk is waiting.</strong><p>Generate an artwork and it will appear here with a private share setting by default.</p><Link className="primary-action" href="/create">Create from a route <span>↗</span></Link></div>}{status === "ready" && artworks.length > 0 && <div className="library-grid">{artworks.map((artwork) => <article key={artwork.id}><div className="library-art"><img src={`${API}${artwork.preview_url}`} alt={`Generated artwork for ${artwork.title}`} /><span>{artwork.visibility}</span></div><div><p>{new Date(artwork.created_at).toLocaleDateString()}</p><h2>{artwork.title}</h2><small>{artwork.subtitle}</small><label className="visibility-control">Visibility<select value={artwork.visibility} onChange={(event)=>changeVisibility(artwork.id, event.target.value as Artwork["visibility"])}><option value="private">Private</option><option value="unlisted">Unlisted</option><option value="public">Public</option></select></label><div className="library-actions"><a href={`${API}${artwork.preview_url}`} download>PNG ↓</a><Link href={artwork.share_url}>View work ↗</Link></div></div></article>)}</div>}</section></main>;
+
+  useEffect(() => {
+    fetch(`${API}/api/v1/me/artworks`, { credentials: "include", cache: "no-store" })
+      .then(async (response) => { if (!response.ok) throw new Error(); return response.json(); })
+      .then((body) => { setArtworks(body.artworks || []); setStatus("ready"); })
+      .catch(() => setStatus("error"));
+  }, []);
+
+  async function changeVisibility(id: string, visibility: Artwork["visibility"]) {
+    const response = await fetch(`${API}/api/v1/artworks/${id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ visibility }) });
+    if (response.ok) setArtworks((items) => items.map((item) => item.id === id ? { ...item, visibility } : item));
+  }
+
+  return <main className="library-page">
+    <header className="site-header">
+      <Link className="brand" href="/"><span className="brand-line" />Meander</Link>
+      <nav aria-label="Main navigation"><Link href="/create">Create</Link><Link href="/library">Library</Link></nav>
+      <AccountNav />
+    </header>
+    <section className="library-intro"><p className="section-kicker">Your library</p><h1>Walks you<br />made <span>yours.</span></h1><p>Each work is saved with its engine recipe and movement fingerprint. Set its privacy, share it, or download it whenever you want.</p></section>
+    <section className="library-content">
+      {status === "loading" && <p className="library-state">Loading your Meanders…</p>}
+      {status === "error" && <div className="library-state"><strong>Sign in to see your library.</strong><p>Your saved artworks remain private. Continue with Google to return to your work.</p><Link className="primary-action" href="/sign-in?returnTo=/library">Continue with Google <span>↗</span></Link></div>}
+      {status === "ready" && artworks.length === 0 && <div className="library-state"><strong>Your first walk is waiting.</strong><p>Generate an artwork and it will appear here with a private share setting by default.</p><Link className="primary-action" href="/create">Create from a route <span>↗</span></Link></div>}
+      {status === "ready" && artworks.length > 0 && <div className="library-grid">{artworks.map((artwork) => <article key={artwork.id}><div className="library-art"><img src={`${API}${artwork.preview_url}`} alt={`Generated artwork for ${artwork.title}`} /><span>{artwork.visibility}</span></div><div><p>{new Date(artwork.created_at).toLocaleDateString()}</p><h2>{artwork.title}</h2><small>{artwork.subtitle}</small><label className="visibility-control">Visibility<select value={artwork.visibility} onChange={(event) => changeVisibility(artwork.id, event.target.value as Artwork["visibility"])}><option value="private">Private</option><option value="unlisted">Unlisted</option><option value="public">Public</option></select></label><div className="library-actions"><a href={`${API}${artwork.preview_url}`} download>PNG ↓</a><Link href={artwork.share_url}>View work ↗</Link></div></div></article>)}</div>}
+    </section>
+  </main>;
 }

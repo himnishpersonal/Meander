@@ -43,3 +43,10 @@ footer .brand-mark{color:var(--white)}
 .auth-progress.complete>span{display:grid;place-items:center;border:0;background:var(--forest);color:var(--white);animation:none;font-size:12px}
 .auth-progress strong{font-size:13px}.auth-progress p{margin:3px 0 0!important;font:400 9px/1.4 'IBM Plex Mono',monospace!important;color:#66736a!important}
 @keyframes auth-spin{to{transform:rotate(360deg)}}
+
+.account-loading{width:112px;height:39px;border-radius:999px;background:rgba(23,55,43,.08);animation:account-pulse 1s ease-in-out infinite alternate}
+.account-nav{display:flex;align-items:center;gap:11px}.account-nav>a{display:flex;align-items:center;gap:8px;padding:7px 12px 7px 7px;border:var(--hair);border-radius:999px;text-decoration:none;font-size:13px;color:var(--forest)}
+.account-avatar{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;background:var(--forest);color:var(--white);font:500 10px 'IBM Plex Mono',monospace;text-transform:uppercase}
+.account-nav button{padding:7px 2px;border:0;background:transparent;color:#68736b;font:500 9px 'IBM Plex Mono',monospace;cursor:pointer;text-transform:uppercase}.account-nav button:hover{color:var(--clay)}.account-nav button:disabled{opacity:.55;cursor:wait}
+@keyframes account-pulse{to{opacity:.4}}
+@media(max-width:560px){.account-nav button{display:none}.account-nav>a>span:last-child{display:none}.account-nav>a{padding:6px}}

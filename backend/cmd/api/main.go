@@ -158,6 +158,7 @@ func (s server) logout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 func (s server) me(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "private, no-store")
 	user, err := s.currentUser(r)
 	if err != nil {
 		fail(w, 401, err)
