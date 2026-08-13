@@ -103,6 +103,25 @@ func (s *PostgresStore) ListArtworks(ctx context.Context, userID string) ([]Artw
 	}
 	return items, rows.Err()
 }
+func (s *PostgresStore) ListPublicArtworks(ctx context.Context, limit int) ([]Artwork, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 48
+	}
+	rows, err := s.pool.Query(ctx, `SELECT `+artworkColumns+` FROM artworks WHERE visibility='public' AND deleted_at IS NULL ORDER BY created_at DESC LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Artwork{}
+	for rows.Next() {
+		a, err := scanArtwork(rows)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, a)
+	}
+	return items, rows.Err()
+}
 func (s *PostgresStore) GetArtwork(ctx context.Context, id string) (Artwork, error) {
 	return s.get(ctx, `SELECT `+artworkColumns+` FROM artworks WHERE id=$1 AND deleted_at IS NULL`, id)
 }

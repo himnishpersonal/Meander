@@ -37,6 +37,7 @@ type Store interface {
 	RevokeSession(context.Context, string) error
 	CreateArtwork(context.Context, Artwork) error
 	ListArtworks(context.Context, string) ([]Artwork, error)
+	ListPublicArtworks(context.Context, int) ([]Artwork, error)
 	GetArtwork(context.Context, string) (Artwork, error)
 	GetArtworkByShareID(context.Context, string) (Artwork, error)
 	SetVisibility(context.Context, string, string, Visibility) error

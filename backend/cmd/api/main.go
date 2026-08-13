@@ -87,6 +87,7 @@ func (s server) routes() http.Handler {
 	mux.HandleFunc("GET /api/v1/me", s.me)
 	mux.HandleFunc("POST /api/v1/generate", s.generate)
 	mux.HandleFunc("GET /api/v1/me/artworks", s.library)
+	mux.HandleFunc("GET /api/v1/gallery", s.gallery)
 	mux.HandleFunc("GET /api/v1/artworks/{id}", s.artwork)
 	mux.HandleFunc("PATCH /api/v1/artworks/{id}", s.updateArtwork)
 	mux.HandleFunc("DELETE /api/v1/artworks/{id}", s.deleteArtwork)
@@ -292,6 +293,18 @@ func (s server) artwork(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 200, artworkSummary(a))
+}
+func (s server) gallery(w http.ResponseWriter, r *http.Request) {
+	items, err := s.store.ListPublicArtworks(r.Context(), 48)
+	if err != nil {
+		fail(w, http.StatusInternalServerError, err)
+		return
+	}
+	summaries := make([]map[string]any, 0, len(items))
+	for _, item := range items {
+		summaries = append(summaries, artworkSummary(item))
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"artworks": summaries})
 }
 func (s server) updateArtwork(w http.ResponseWriter, r *http.Request) {
 	user, err := s.currentUser(r)

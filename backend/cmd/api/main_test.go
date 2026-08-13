@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"walkart/internal/product"
 )
@@ -87,6 +88,30 @@ func TestProductionCORSUsesAllowList(t *testing.T) {
 	}
 	if originAllowed("https://attacker.example") {
 		t.Fatal("unconfigured production origins must be rejected")
+	}
+}
+
+func TestGalleryOnlyReturnsPublishedArtwork(t *testing.T) {
+	store := product.NewMemoryStore()
+	user, err := store.EnsureUser(context.Background(), "walker@example.com", "Walker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	private := product.Artwork{ID: "private-work", UserID: user.ID, ShareID: "private-share", Title: "Private", Visibility: product.Private, FeaturesJSON: []byte(`{}`), EventsJSON: []byte(`[]`), RecipeJSON: []byte(`{}`), ScoreJSON: []byte(`{}`), CreatedAt: now}
+	public := product.Artwork{ID: "public-work", UserID: user.ID, ShareID: "public-share", Title: "Published", Visibility: product.Public, FeaturesJSON: []byte(`{}`), EventsJSON: []byte(`[]`), RecipeJSON: []byte(`{}`), ScoreJSON: []byte(`{}`), CreatedAt: now.Add(time.Second)}
+	if err = store.CreateArtwork(context.Background(), private); err != nil {
+		t.Fatal(err)
+	}
+	if err = store.CreateArtwork(context.Background(), public); err != nil {
+		t.Fatal(err)
+	}
+	s := server{store: store, environment: "development"}
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/gallery", nil)
+	rec := httptest.NewRecorder()
+	s.routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !bytes.Contains(rec.Body.Bytes(), []byte("public-work")) || bytes.Contains(rec.Body.Bytes(), []byte("private-work")) {
+		t.Fatalf("gallery visibility leak: %d %s", rec.Code, rec.Body.String())
 	}
 }
 

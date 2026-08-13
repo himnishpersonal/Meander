@@ -116,6 +116,22 @@ func (s *MemoryStore) ListArtworks(_ context.Context, userID string) ([]Artwork,
 	return items, nil
 }
 
+func (s *MemoryStore) ListPublicArtworks(_ context.Context, limit int) ([]Artwork, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	items := make([]Artwork, 0)
+	for _, a := range s.artworks {
+		if a.Visibility == Public {
+			items = append(items, a)
+		}
+	}
+	sort.Slice(items, func(i, j int) bool { return items[i].CreatedAt.After(items[j].CreatedAt) })
+	if limit > 0 && len(items) > limit {
+		items = items[:limit]
+	}
+	return items, nil
+}
+
 func (s *MemoryStore) GetArtwork(_ context.Context, id string) (Artwork, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

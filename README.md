@@ -2,8 +2,8 @@
 
 Meander turns the geometry of a recorded walk into one deterministic abstract artwork. The route remains the primary creative signal: it shapes direction, turbulence, color territories, hierarchy, and focal structure, then reappears as a restrained broken “route-memory” line that can be discovered without dominating the abstraction.
 
-Current engine: **`field-3.2.0`**  
-Global calibration: **`walk-art-v1`**  
+Current engine: **`field-3.2.1`**
+Global calibration: **`walk-art-v1`**
 Product contract: **one walk → one canonical artwork**
 
 Deployment and release plumbing is documented in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). Pull requests run the complete frontend, Go, and container checks; production releases are deliberately gated.
@@ -24,7 +24,9 @@ Deployment and release plumbing is documented in [`docs/DEPLOYMENT.md`](docs/DEP
 - Global cold-start calibration from the first upload
 - One canonical SVG and PNG result
 - Explainable fingerprint, recipe, and named quality scores
-- Google accounts, private artwork storage, share controls, and an artwork library
+- Google accounts, private artwork storage, link sharing, intentional publishing, and an artwork library
+- Public gallery containing only artworks their creators explicitly publish
+- Dedicated visual walkthrough explaining route interpretation and the artwork lifecycle
 - Production creation studio with staged progress and recovery states
 
 Meander does not currently have Strava OAuth, webhooks, or personal learning. Those remain separate future product phases.
@@ -179,6 +181,8 @@ Open:
 
 - Landing page: [http://localhost:3000](http://localhost:3000)
 - Creation studio: [http://localhost:3000/create](http://localhost:3000/create)
+- How Meander works: [http://localhost:3000/how-it-works](http://localhost:3000/how-it-works)
+- Public gallery: [http://localhost:3000/gallery](http://localhost:3000/gallery)
 - Engine health: [http://localhost:8080/healthz](http://localhost:8080/healthz)
 
 Nothing needs to be deployed.
@@ -208,6 +212,8 @@ curl -X POST http://localhost:8080/api/v1/generate \
 ```
 
 The response contains one artwork URL, one preview URL, route features, local events, the canonical recipe, and named quality scores. It does not contain finalists.
+
+New artworks are private by default. `PATCH /api/v1/artworks/{id}` can make an owned work `unlisted` for link-only sharing or `public` for gallery discovery. `GET /api/v1/gallery` returns only explicitly public, non-deleted artworks; raw route uploads are never part of that response.
 
 ## Output bundle
 
