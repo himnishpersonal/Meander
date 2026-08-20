@@ -1,0 +1,16 @@
+import Link from "next/link";
+import { AccountNav } from "@/app/account-nav";
+
+export const metadata = { title: "Privacy | Meander" };
+
+export default function PrivacyPage() {
+  return <main className="legal-page"><header className="site-header"><Link className="brand" href="/"><span className="brand-line" />Meander</Link><nav aria-label="Main navigation"><Link href="/how-it-works">How Meander works</Link><Link href="/terms">Terms</Link></nav><AccountNav /></header>
+    <section className="legal-hero"><p className="section-kicker">Privacy</p><h1>Your movement<br /><span>is yours.</span></h1><p>A plain-language summary of what Meander needs to create artwork, what it keeps, and what you control.</p><small>Effective date: August 19, 2026 · This policy must be finalized with Meander’s legal business name and contact email before public launch.</small></section>
+    <section className="legal-content"><article><h2>What we collect</h2><p>When you sign in, Meander receives your Google account email address and display name to create and secure your account. When you create artwork, you may provide a route file, route screenshot, location label, time of day, and music context. Route files and screenshots can contain precise location information.</p></article>
+      <article><h2>How creation inputs are handled</h2><p>Route files and screenshots are processed to make one artwork. They are not retained as files in your account after processing. Meander stores the finished PNG/SVG artwork and abstract creation metadata such as title, palette, movement metrics, and engine version so you can access your library.</p></article>
+      <article><h2>Sharing and public work</h2><p>Every artwork starts private. You may create a link-only share or publish work to the public gallery. A share link exposes the finished artwork and limited display metadata, never the original upload. You can make an artwork private again to revoke its Meander link, though copies already downloaded or reposted by others cannot be recalled.</p></article>
+      <article><h2>Service providers</h2><p>Meander uses Google for sign-in, Vercel to deliver the web app, Google Cloud Run for the API and engine, Neon for account and artwork records, and Cloudflare R2 for stored artwork files. These providers process data only to operate Meander’s service.</p></article>
+      <article><h2>Your choices</h2><p>You can delete individual artworks in your library, control each artwork’s visibility, sign out, or permanently delete your account from <Link href="/account">Account controls</Link>. Account deletion removes account records, sessions, finished artworks, and stored artwork files.</p></article>
+      <article><h2>Contact and updates</h2><p>Before Meander’s public launch, this section will list the responsible legal entity, postal address, privacy contact, and applicable regional-rights process. Do not represent this draft as a completed public privacy notice until those details are supplied and legal review is complete.</p></article>
+    </section><footer className="legal-footer"><Link href="/terms">Terms</Link><Link href="/copyright">Copyright</Link><Link href="/account">Account controls</Link></footer></main>;
+}

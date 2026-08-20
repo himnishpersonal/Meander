@@ -73,6 +73,114 @@ func (s *PostgresStore) RevokeSession(ctx context.Context, tokenHash string) err
 	}
 	return nil
 }
+func (s *PostgresStore) RevokeUserSessions(ctx context.Context, userID string) error {
+	_, err := s.pool.Exec(ctx, `UPDATE sessions SET revoked_at=now() WHERE user_id=$1 AND revoked_at IS NULL`, userID)
+	return err
+}
+func (s *PostgresStore) DeleteUser(ctx context.Context, userID string) ([]Artwork, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+	rows, err := tx.Query(ctx, `SELECT `+artworkColumns+` FROM artworks WHERE user_id=$1 AND deleted_at IS NULL FOR UPDATE`, userID)
+	if err != nil {
+		return nil, err
+	}
+	artworks := []Artwork{}
+	for rows.Next() {
+		a, scanErr := scanArtwork(rows)
+		if scanErr != nil {
+			rows.Close()
+			return nil, scanErr
+		}
+		artworks = append(artworks, a)
+	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
+	}
+	rows.Close()
+	tag, err := tx.Exec(ctx, `DELETE FROM users WHERE id=$1`, userID)
+	if err != nil {
+		return nil, err
+	}
+	if tag.RowsAffected() != 1 {
+		return nil, ErrNotFound
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return artworks, nil
+}
+
+func (s *PostgresStore) AllowRateLimit(ctx context.Context, key string, limit int, window time.Duration) (bool, time.Duration, error) {
+	if limit <= 0 {
+		return true, 0, nil
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return false, 0, err
+	}
+	defer tx.Rollback(ctx)
+	if _, err = tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, key); err != nil {
+		return false, 0, err
+	}
+	var started time.Time
+	var count int
+	err = tx.QueryRow(ctx, `SELECT window_started_at, request_count FROM rate_limit_windows WHERE rate_key=$1 FOR UPDATE`, key).Scan(&started, &count)
+	if errors.Is(err, pgx.ErrNoRows) {
+		if _, err = tx.Exec(ctx, `INSERT INTO rate_limit_windows (rate_key,window_started_at,request_count) VALUES ($1,now(),1)`, key); err != nil {
+			return false, 0, err
+		}
+		return true, 0, tx.Commit(ctx)
+	}
+	if err != nil {
+		return false, 0, err
+	}
+	now := time.Now()
+	if !now.Before(started.Add(window)) {
+		if _, err = tx.Exec(ctx, `UPDATE rate_limit_windows SET window_started_at=now(), request_count=1 WHERE rate_key=$1`, key); err != nil {
+			return false, 0, err
+		}
+		return true, 0, tx.Commit(ctx)
+	}
+	if count >= limit {
+		if err = tx.Commit(ctx); err != nil {
+			return false, 0, err
+		}
+		return false, time.Until(started.Add(window)), nil
+	}
+	if _, err = tx.Exec(ctx, `UPDATE rate_limit_windows SET request_count=request_count+1 WHERE rate_key=$1`, key); err != nil {
+		return false, 0, err
+	}
+	return true, 0, tx.Commit(ctx)
+}
+func (s *PostgresStore) StartGeneration(ctx context.Context, id, userID string, dailyLimit int) error {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	if _, err = tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, userID); err != nil {
+		return err
+	}
+	var count int
+	if err = tx.QueryRow(ctx, `SELECT count(*) FROM generation_jobs WHERE user_id=$1 AND created_at >= now() - interval '24 hours'`, userID).Scan(&count); err != nil {
+		return err
+	}
+	if count >= dailyLimit {
+		return ErrQuotaExceeded
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO generation_jobs (id,user_id,status) VALUES ($1,$2,'processing')`, id, userID); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+func (s *PostgresStore) FinishGeneration(ctx context.Context, id, status, errorCode, artworkID string) error {
+	_, err := s.pool.Exec(ctx, `UPDATE generation_jobs SET status=$1,error_code=NULLIF($2,''),artwork_id=NULLIF($3,''),completed_at=now() WHERE id=$4`, status, errorCode, artworkID, id)
+	return err
+}
 func (s *PostgresStore) CreateArtwork(ctx context.Context, a Artwork) error {
 	const q = `INSERT INTO artworks (id,user_id,share_id,title,subtitle,palette,engine_version,visibility,svg_key,png_key,fingerprint_key,recipe_key,features,events,recipe,score,created_at)
 	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14::jsonb,$15::jsonb,$16::jsonb,$17)`
@@ -137,6 +245,16 @@ func (s *PostgresStore) get(ctx context.Context, query, value string) (Artwork, 
 }
 func (s *PostgresStore) SetVisibility(ctx context.Context, id, userID string, visibility Visibility) error {
 	tag, err := s.pool.Exec(ctx, `UPDATE artworks SET visibility=$1 WHERE id=$2 AND user_id=$3 AND deleted_at IS NULL`, visibility, id, userID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() != 1 {
+		return ErrNotFound
+	}
+	return nil
+}
+func (s *PostgresStore) RotateShareID(ctx context.Context, id, userID, shareID string) error {
+	tag, err := s.pool.Exec(ctx, `UPDATE artworks SET share_id=$1 WHERE id=$2 AND user_id=$3 AND deleted_at IS NULL`, shareID, id, userID)
 	if err != nil {
 		return err
 	}

@@ -4,10 +4,22 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 )
 
 const tinyGPX = `<?xml version="1.0"?><gpx><trk><trkseg><trkpt lat="40.0" lon="-73.0"><ele>2</ele><time>2026-08-09T10:00:00Z</time></trkpt><trkpt lat="40.001" lon="-73.0"><ele>7</ele><time>2026-08-09T10:01:00Z</time></trkpt><trkpt lat="40.001" lon="-73.001"><ele>4</ele><time>2026-08-09T10:05:00Z</time></trkpt><trkpt lat="40.0" lon="-73.001"><ele>12</ele><time>2026-08-09T10:06:00Z</time></trkpt><trkpt lat="40.0" lon="-73.0"><ele>2</ele><time>2026-08-09T10:07:00Z</time></trkpt></trkseg></trk></gpx>`
+
+func TestParseRejectsOversizedAndOvercomplexRoutes(t *testing.T) {
+	tooLarge := strings.Repeat("x", (16<<20)+1)
+	if _, err := Parse(strings.NewReader(tooLarge), "large.gpx"); err == nil || !strings.Contains(err.Error(), "16 MB") {
+		t.Fatalf("expected upload size error, got %v", err)
+	}
+	tooComplex := "<gpx><trk><trkseg>" + strings.Repeat(`<trkpt lat="40" lon="-73"/>`, 100001) + "</trkseg></trk></gpx>"
+	if _, err := Parse(strings.NewReader(tooComplex), "complex.gpx"); err == nil || !strings.Contains(err.Error(), "too complex") {
+		t.Fatalf("expected complexity error, got %v", err)
+	}
+}
 
 func TestDeterministic(t *testing.T) {
 	p, e := Parse(bytes.NewBufferString(tinyGPX), "x.gpx")

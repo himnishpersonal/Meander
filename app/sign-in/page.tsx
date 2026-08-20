@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { API } from "@/app/api";
+import { API, MEANDER_REQUEST_HEADERS } from "@/app/api";
 
 type GoogleCredentialResponse = { credential: string };
 type GoogleIdentity = {
@@ -19,7 +19,14 @@ declare global {
 
 function safeReturnPath() {
   const requested = new URLSearchParams(window.location.search).get("returnTo");
-  return requested?.startsWith("/") && !requested.startsWith("//") ? requested : "/create";
+  if (!requested?.startsWith("/") || requested.startsWith("//")) return "/create";
+  try {
+    const target = new URL(requested, window.location.origin);
+    if (target.origin !== window.location.origin) return "/create";
+    return `${target.pathname}${target.search}${target.hash}`;
+  } catch {
+    return "/create";
+  }
 }
 
 export default function SignInPage() {
@@ -68,7 +75,7 @@ export default function SignInPage() {
         const result = await fetch(`${API}/api/v1/auth/google`, {
           method: "POST",
           credentials: "include",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...MEANDER_REQUEST_HEADERS },
           body: JSON.stringify({ credential: response.credential }),
         });
         const body = await result.json().catch(() => ({}));

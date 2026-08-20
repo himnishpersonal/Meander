@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -27,12 +28,15 @@ type googleIdentity struct{ Email, Name string }
 type googleVerifier func(context.Context, string, string) (googleIdentity, error)
 
 type server struct {
-	output, fixtures string
-	store            product.Store
-	objects          product.Objects
-	environment      string
-	googleClientID   string
-	verifyGoogle     googleVerifier
+	output, fixtures  string
+	store             product.Store
+	objects           product.Objects
+	environment       string
+	googleClientID    string
+	verifyGoogle      googleVerifier
+	authLimiter       *rateLimiter
+	generationLimiter *rateLimiter
+	generationGuard   *concurrencyGuard
 }
 
 func main() {
@@ -43,13 +47,25 @@ func main() {
 	}
 	addr := envFallback("MEANDER_ADDR", "WALKART_ADDR", ":"+env("PORT", "8080"))
 	log.Printf("meander engine %s on %s (%s storage)", engine.Version, addr, s.environment)
-	log.Fatal(http.ListenAndServe(addr, s.routes()))
+	httpServer := &http.Server{
+		Addr:              addr,
+		Handler:           s.routes(),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      120 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 20,
+	}
+	log.Fatal(httpServer.ListenAndServe())
 }
 
 func newServer(ctx context.Context) (server, error) {
 	out := envFallback("MEANDER_OUTPUT", "WALKART_OUTPUT", "output")
 	fixtures := envFallback("MEANDER_FIXTURES", "WALKART_FIXTURES", "fixtures")
-	s := server{output: out, fixtures: fixtures, environment: env("MEANDER_ENV", "development"), googleClientID: os.Getenv("MEANDER_GOOGLE_CLIENT_ID")}
+	s := server{output: out, fixtures: fixtures, environment: env("MEANDER_ENV", "development"), googleClientID: os.Getenv("MEANDER_GOOGLE_CLIENT_ID"), authLimiter: newRateLimiter(), generationLimiter: newRateLimiter(), generationGuard: newConcurrencyGuard()}
+	if s.environment == "production" && strings.TrimSpace(os.Getenv("MEANDER_RATE_LIMIT_SALT")) == "" {
+		return server{}, errors.New("MEANDER_RATE_LIMIT_SALT is required in production")
+	}
 	if databaseURL := os.Getenv("DATABASE_URL"); databaseURL != "" {
 		store, err := product.NewPostgresStore(ctx, databaseURL)
 		if err != nil {
@@ -85,6 +101,7 @@ func (s server) routes() http.Handler {
 	mux.HandleFunc("POST /api/v1/auth/google", s.googleSignIn)
 	mux.HandleFunc("POST /api/v1/auth/logout", s.logout)
 	mux.HandleFunc("GET /api/v1/me", s.me)
+	mux.HandleFunc("DELETE /api/v1/me", s.deleteAccount)
 	mux.HandleFunc("POST /api/v1/generate", s.generate)
 	mux.HandleFunc("GET /api/v1/me/artworks", s.library)
 	mux.HandleFunc("GET /api/v1/gallery", s.gallery)
@@ -93,8 +110,10 @@ func (s server) routes() http.Handler {
 	mux.HandleFunc("DELETE /api/v1/artworks/{id}", s.deleteArtwork)
 	mux.HandleFunc("GET /api/v1/artworks/{id}/files/{file}", s.file)
 	mux.HandleFunc("GET /api/v1/share/{shareID}", s.sharedArtwork)
-	mux.Handle("GET /artifacts/", http.StripPrefix("/artifacts/", http.FileServer(http.Dir(s.output))))
-	return cors(mux)
+	if s.environment != "production" {
+		mux.Handle("GET /artifacts/", http.StripPrefix("/artifacts/", http.FileServer(http.Dir(s.output))))
+	}
+	return securityHeaders(cors(csrfProtection(mux)))
 }
 
 func (s server) publicConfig(w http.ResponseWriter, _ *http.Request) {
@@ -107,6 +126,17 @@ func (s server) publicConfig(w http.ResponseWriter, _ *http.Request) {
 func (s server) googleSignIn(w http.ResponseWriter, r *http.Request) {
 	if s.googleClientID == "" {
 		fail(w, http.StatusServiceUnavailable, errors.New("Google sign-in is not configured"))
+		return
+	}
+	limiter := s.authLimiter
+	if limiter == nil {
+		limiter = defaultAuthLimiter
+	}
+	if allowed, retry, rateErr := s.allowRateLimit(r, "auth", positiveEnvInt("MEANDER_AUTH_LIMIT_15M", 300), 15*time.Minute, limiter); rateErr != nil {
+		fail(w, http.StatusInternalServerError, rateErr)
+		return
+	} else if !allowed {
+		rateLimitFailure(w, retry)
 		return
 	}
 	var input struct {
@@ -143,19 +173,15 @@ func (s server) issueSession(w http.ResponseWriter, r *http.Request, user produc
 		fail(w, 500, err)
 		return
 	}
-	sameSite := http.SameSiteLaxMode
-	if s.environment == "production" {
-		sameSite = http.SameSiteNoneMode
-	}
-	http.SetCookie(w, &http.Cookie{Name: "meander_session", Value: session, Path: "/", HttpOnly: true, Secure: s.environment == "production", SameSite: sameSite, MaxAge: 30 * 24 * 60 * 60})
+	http.SetCookie(w, s.sessionCookie(session, 30*24*60*60))
 	writeJSON(w, http.StatusCreated, map[string]any{"user": user})
 }
 
 func (s server) logout(w http.ResponseWriter, r *http.Request) {
-	if cookie, err := r.Cookie("meander_session"); err == nil {
+	if cookie, err := r.Cookie(s.sessionCookieName()); err == nil {
 		_ = s.store.RevokeSession(r.Context(), tokenHash(cookie.Value))
 	}
-	http.SetCookie(w, &http.Cookie{Name: "meander_session", Value: "", Path: "/", HttpOnly: true, Secure: s.environment == "production", MaxAge: -1})
+	http.SetCookie(w, s.sessionCookie("", -1))
 	w.WriteHeader(http.StatusNoContent)
 }
 func (s server) me(w http.ResponseWriter, r *http.Request) {
@@ -166,6 +192,40 @@ func (s server) me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 200, user)
+}
+func (s server) deleteAccount(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "private, no-store")
+	user, err := s.currentUser(r)
+	if err != nil {
+		fail(w, http.StatusUnauthorized, err)
+		return
+	}
+	var input struct {
+		Confirmation string `json:"confirmation"`
+	}
+	if err = json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<10)).Decode(&input); err != nil || input.Confirmation != "DELETE" {
+		fail(w, http.StatusBadRequest, errors.New("type DELETE to permanently delete your account"))
+		return
+	}
+	artworks, err := s.store.ListArtworks(r.Context(), user.ID)
+	if err != nil {
+		fail(w, http.StatusInternalServerError, err)
+		return
+	}
+	for _, artwork := range artworks {
+		for _, key := range []string{artwork.SVGKey, artwork.PNGKey, artwork.FingerprintKey, artwork.RecipeKey} {
+			if err = s.objects.Delete(r.Context(), key); err != nil {
+				fail(w, http.StatusInternalServerError, err)
+				return
+			}
+		}
+	}
+	if _, err = s.store.DeleteUser(r.Context(), user.ID); err != nil {
+		fail(w, http.StatusInternalServerError, err)
+		return
+	}
+	http.SetCookie(w, s.sessionCookie("", -1))
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s server) samples(w http.ResponseWriter, r *http.Request) {
@@ -178,10 +238,41 @@ func (s server) generate(w http.ResponseWriter, r *http.Request) {
 		fail(w, http.StatusUnauthorized, err)
 		return
 	}
+	limiter := s.generationLimiter
+	if limiter == nil {
+		limiter = defaultGenerationLimiter
+	}
+	if allowed, retry, rateErr := s.store.AllowRateLimit(r.Context(), "generation:user:"+user.ID, positiveEnvInt("MEANDER_GENERATION_LIMIT_10M", 6), 10*time.Minute); rateErr != nil {
+		fail(w, http.StatusInternalServerError, rateErr)
+		return
+	} else if !allowed {
+		rateLimitFailure(w, retry)
+		return
+	}
+	if allowed, retry, rateErr := s.allowRateLimit(r, "generation:ip", positiveEnvInt("MEANDER_GENERATION_IP_LIMIT_HOUR", 300), time.Hour, limiter); rateErr != nil {
+		fail(w, http.StatusInternalServerError, rateErr)
+		return
+	} else if !allowed {
+		rateLimitFailure(w, retry)
+		return
+	}
+	guard := s.generationGuard
+	if guard == nil {
+		guard = defaultGenerationGuard
+	}
+	release, ok := guard.begin(user.ID, positiveEnvInt("MEANDER_GENERATION_CONCURRENCY", 1))
+	if !ok {
+		fail(w, http.StatusConflict, errors.New("another artwork is already being generated"))
+		return
+	}
+	defer release()
 	r.Body = http.MaxBytesReader(w, r.Body, 16<<20)
 	if err := r.ParseMultipartForm(16 << 20); err != nil {
 		fail(w, 400, fmt.Errorf("invalid upload: %w", err))
 		return
+	}
+	if r.MultipartForm != nil {
+		defer r.MultipartForm.RemoveAll()
 	}
 	file, head, err := s.routeFile(r)
 	if err != nil {
@@ -194,8 +285,18 @@ func (s server) generate(w http.ResponseWriter, r *http.Request) {
 		fail(w, 422, err)
 		return
 	}
+	jobID := product.NewID("job_")
+	if err = s.store.StartGeneration(r.Context(), jobID, user.ID, positiveEnvInt("MEANDER_DAILY_GENERATION_LIMIT", 25)); err != nil {
+		if errors.Is(err, product.ErrQuotaExceeded) {
+			fail(w, http.StatusTooManyRequests, err)
+		} else {
+			fail(w, http.StatusInternalServerError, err)
+		}
+		return
+	}
 	result, err := engine.Generate(points, engine.Context{LocationLabel: clean(r.FormValue("location_label")), TimeOfDay: clean(r.FormValue("time_of_day")), MusicTempo: number(r.FormValue("music_tempo")), MusicEnergy: number(r.FormValue("music_energy"))})
 	if err != nil {
+		_ = s.store.FinishGeneration(r.Context(), jobID, "failed", "generation_failed", "")
 		fail(w, 422, err)
 		return
 	}
@@ -210,9 +311,11 @@ func (s server) generate(w http.ResponseWriter, r *http.Request) {
 	}
 	artwork, err := s.persistArtwork(r.Context(), user, result)
 	if err != nil {
+		_ = s.store.FinishGeneration(r.Context(), jobID, "failed", "persistence_failed", "")
 		fail(w, 500, err)
 		return
 	}
+	_ = s.store.FinishGeneration(r.Context(), jobID, "complete", "", artwork.ID)
 	writeJSON(w, http.StatusCreated, s.artworkResponse(artwork, result.Features, result.Events, result.Recipe))
 }
 
@@ -224,6 +327,9 @@ func (s server) routeFile(r *http.Request) (multipart.File, *multipart.FileHeade
 	sample := filepath.Base(r.FormValue("sample"))
 	if sample == "." || sample == "" {
 		return nil, nil, errors.New("route file is required")
+	}
+	if !allowedSample(sample) {
+		return nil, nil, errors.New("sample route not found")
 	}
 	opened, err := os.Open(filepath.Join(s.fixtures, sample))
 	if err != nil {
@@ -265,6 +371,7 @@ func (s server) persistArtwork(ctx context.Context, user product.User, result en
 }
 
 func (s server) library(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "private, no-store")
 	user, err := s.currentUser(r)
 	if err != nil {
 		fail(w, 401, err)
@@ -282,6 +389,7 @@ func (s server) library(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"user": user, "artworks": summaries})
 }
 func (s server) artwork(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "private, no-store")
 	user, err := s.currentUser(r)
 	if err != nil {
 		fail(w, 401, err)
@@ -302,7 +410,7 @@ func (s server) gallery(w http.ResponseWriter, r *http.Request) {
 	}
 	summaries := make([]map[string]any, 0, len(items))
 	for _, item := range items {
-		summaries = append(summaries, artworkSummary(item))
+		summaries = append(summaries, publicArtworkSummary(item))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"artworks": summaries})
 }
@@ -319,11 +427,27 @@ func (s server) updateArtwork(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, errors.New("visibility must be private, unlisted, or public"))
 		return
 	}
+	a, err := s.store.GetArtwork(r.Context(), r.PathValue("id"))
+	if err != nil || a.UserID != user.ID {
+		fail(w, 404, product.ErrNotFound)
+		return
+	}
+	if a.Visibility == product.Private && input.Visibility != product.Private {
+		if err = s.store.RotateShareID(r.Context(), a.ID, user.ID, product.NewID("")); err != nil {
+			fail(w, 500, err)
+			return
+		}
+	}
 	if err = s.store.SetVisibility(r.Context(), r.PathValue("id"), user.ID, input.Visibility); err != nil {
 		fail(w, 404, err)
 		return
 	}
-	writeJSON(w, 200, map[string]string{"status": "updated"})
+	a, err = s.store.GetArtwork(r.Context(), a.ID)
+	if err != nil {
+		fail(w, 500, err)
+		return
+	}
+	writeJSON(w, 200, artworkSummary(a))
 }
 func (s server) deleteArtwork(w http.ResponseWriter, r *http.Request) {
 	user, err := s.currentUser(r)
@@ -347,7 +471,7 @@ func (s server) sharedArtwork(w http.ResponseWriter, r *http.Request) {
 		fail(w, 404, product.ErrNotFound)
 		return
 	}
-	writeJSON(w, 200, artworkSummary(a))
+	writeJSON(w, 200, publicArtworkSummary(a))
 }
 func (s server) file(w http.ResponseWriter, r *http.Request) {
 	a, err := s.store.GetArtwork(r.Context(), r.PathValue("id"))
@@ -356,7 +480,9 @@ func (s server) file(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user, userErr := s.currentUser(r)
-	if a.Visibility == product.Private && (userErr != nil || user.ID != a.UserID) {
+	isOwner := userErr == nil && user.ID == a.UserID
+	hasCurrentShareID := a.Visibility != product.Private && r.URL.Query().Get("share") == a.ShareID
+	if !isOwner && !hasCurrentShareID {
 		fail(w, 404, product.ErrNotFound)
 		return
 	}
@@ -372,6 +498,12 @@ func (s server) file(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", typ)
 	w.Header().Set("Cache-Control", "private, max-age=0, no-store")
+	if r.PathValue("file") != "png" {
+		w.Header().Set("Content-Disposition", "attachment")
+	}
+	if r.PathValue("file") == "svg" {
+		w.Header().Set("Content-Security-Policy", "sandbox; default-src 'none'")
+	}
 	_, _ = w.Write(b)
 }
 
@@ -383,8 +515,26 @@ func artworkSummary(a product.Artwork) map[string]any {
 	return map[string]any{"id": a.ID, "share_id": a.ShareID, "title": a.Title, "subtitle": a.Subtitle, "palette": a.Palette, "engine_version": a.EngineVersion, "visibility": a.Visibility, "created_at": a.CreatedAt, "features": json.RawMessage(a.FeaturesJSON), "events": json.RawMessage(a.EventsJSON), "recipe": json.RawMessage(a.RecipeJSON), "score": json.RawMessage(a.ScoreJSON), "artwork_url": "/api/v1/artworks/" + a.ID + "/files/svg", "preview_url": "/api/v1/artworks/" + a.ID + "/files/png", "share_url": "/m/" + a.ShareID}
 }
 
+func publicArtworkSummary(a product.Artwork) map[string]any {
+	var features struct {
+		DistanceKM float64
+		HardTurns  int
+	}
+	var score struct{ Total float64 }
+	_ = json.Unmarshal(a.FeaturesJSON, &features)
+	_ = json.Unmarshal(a.ScoreJSON, &score)
+	return map[string]any{
+		"id": a.ID, "title": a.Title, "subtitle": a.Subtitle, "palette": a.Palette,
+		"visibility": a.Visibility, "created_at": a.CreatedAt,
+		"artwork_url": "/api/v1/artworks/" + a.ID + "/files/svg?share=" + a.ShareID,
+		"preview_url": "/api/v1/artworks/" + a.ID + "/files/png?share=" + a.ShareID,
+		"share_url":   "/m/" + a.ShareID,
+		"metrics":     map[string]any{"distance_km": features.DistanceKM, "hard_turns": features.HardTurns, "composition_score": score.Total},
+	}
+}
+
 func (s server) currentUser(r *http.Request) (product.User, error) {
-	if cookie, err := r.Cookie("meander_session"); err == nil {
+	if cookie, err := r.Cookie(s.sessionCookieName()); err == nil {
 		if user, sessionErr := s.store.UserForSession(r.Context(), tokenHash(cookie.Value)); sessionErr == nil {
 			return user, nil
 		}
@@ -393,6 +543,44 @@ func (s server) currentUser(r *http.Request) (product.User, error) {
 		return product.User{}, errors.New("sign in is required")
 	}
 	return s.store.EnsureUser(r.Context(), env("MEANDER_DEV_USER_EMAIL", "local@meander.local"), "Local creator")
+}
+
+func (s server) sessionCookieName() string {
+	if s.environment == "production" {
+		return "__Host-meander_session"
+	}
+	return "meander_session"
+}
+
+func (s server) sessionCookie(value string, maxAge int) *http.Cookie {
+	return &http.Cookie{Name: s.sessionCookieName(), Value: value, Path: "/", HttpOnly: true, Secure: s.environment == "production", SameSite: http.SameSiteLaxMode, MaxAge: maxAge}
+}
+
+// allowRateLimit stores only an opaque, salted representation of the caller's
+// address. The fallback keeps local development usable if the backing store is
+// unavailable; production treats store failures as request failures.
+func (s server) allowRateLimit(r *http.Request, namespace string, limit int, window time.Duration, fallback *rateLimiter) (bool, time.Duration, error) {
+	key := namespace + ":" + rateLimitSubject(clientIP(r))
+	if s.store != nil {
+		allowed, retry, err := s.store.AllowRateLimit(r.Context(), key, limit, window)
+		if err == nil || s.environment == "production" {
+			return allowed, retry, err
+		}
+	}
+	if fallback == nil {
+		fallback = newRateLimiter()
+	}
+	allowed, retry := fallback.allow(key, limit, window)
+	return allowed, retry, nil
+}
+
+func allowedSample(name string) bool {
+	switch name {
+	case "central-park.osm", "high-line.osm", "brooklyn-bridge.osm", "golden-gate.osm":
+		return true
+	default:
+		return false
+	}
 }
 
 func cors(next http.Handler) http.Handler {
@@ -404,7 +592,7 @@ func cors(next http.Handler) http.Handler {
 			w.Header().Set("Vary", "Origin")
 		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type,Idempotency-Key")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type,Idempotency-Key,"+csrfHeader)
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(204)
 			return
@@ -413,7 +601,7 @@ func cors(next http.Handler) http.Handler {
 	})
 }
 func originAllowed(origin string) bool {
-	if strings.HasPrefix(origin, "http://localhost:") || strings.HasPrefix(origin, "http://127.0.0.1:") {
+	if os.Getenv("MEANDER_ENV") != "production" && (strings.HasPrefix(origin, "http://localhost:") || strings.HasPrefix(origin, "http://127.0.0.1:")) {
 		return true
 	}
 	for _, allowed := range strings.Split(os.Getenv("MEANDER_ALLOWED_ORIGINS"), ",") {
@@ -429,9 +617,20 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 func fail(w http.ResponseWriter, status int, err error) {
-	writeJSON(w, status, map[string]string{"error": err.Error()})
+	message := err.Error()
+	if status >= 500 {
+		log.Printf("request failed: %v", err)
+		message = "the service could not complete the request"
+	}
+	writeJSON(w, status, map[string]string{"error": message})
 }
-func number(s string) float64 { v, _ := strconv.ParseFloat(s, 64); return v }
+func number(s string) float64 {
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil || math.IsNaN(v) || math.IsInf(v, 0) {
+		return 0
+	}
+	return v
+}
 func clean(s string) string {
 	s = strings.TrimSpace(s)
 	if len(s) > 120 {

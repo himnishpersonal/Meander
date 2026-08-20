@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AccountNav } from "@/app/account-nav";
-import { API } from "@/app/api";
+import { API, MEANDER_REQUEST_HEADERS } from "@/app/api";
 import { BrandMark } from "@/app/brand-mark";
 
 type Visibility = "private" | "unlisted" | "public";
@@ -30,10 +30,11 @@ export default function LibraryPage() {
 
   async function changeVisibility(artwork: Artwork, visibility: Visibility, message: string) {
     setBusy(artwork.id);
-    const response = await fetch(`${API}/api/v1/artworks/${artwork.id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ visibility }) });
+    const response = await fetch(`${API}/api/v1/artworks/${artwork.id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json", ...MEANDER_REQUEST_HEADERS }, body: JSON.stringify({ visibility }) });
     setBusy(null);
     if (!response.ok) { setFeedback((current) => ({ ...current, [artwork.id]: "That change could not be saved." })); return false; }
-    setArtworks((items) => items.map((item) => item.id === artwork.id ? { ...item, visibility } : item));
+    const updated = await response.json().catch(() => ({})) as Partial<Artwork>;
+    setArtworks((items) => items.map((item) => item.id === artwork.id ? { ...item, ...updated, visibility } : item));
     setFeedback((current) => ({ ...current, [artwork.id]: message }));
     return true;
   }
@@ -49,7 +50,7 @@ export default function LibraryPage() {
   }
 
   return <main className="library-page">
-    <header className="site-header"><Link className="brand" href="/"><BrandMark />Meander</Link><nav aria-label="Main navigation"><Link href="/how-it-works">How Meander works</Link><Link href="/gallery">Gallery</Link><Link href="/create">Create</Link></nav><AccountNav /></header>
+    <header className="site-header"><Link className="brand" href="/"><BrandMark />Meander</Link><nav aria-label="Main navigation"><Link href="/how-it-works">How Meander works</Link><Link href="/gallery">Gallery</Link><Link href="/create">Create</Link><Link href="/account">Account</Link></nav><AccountNav /></header>
     <section className="library-intro"><p className="section-kicker">Your library</p><h1>Walks you<br />made <span>yours.</span></h1><p>Every new work begins private. Download it, make a link for specific people, or intentionally publish it to the gallery.</p></section>
     <section className="library-content">
       {status === "loading" && <p className="library-state">Loading your Meanders…</p>}

@@ -35,12 +35,18 @@ type Store interface {
 	CreateSession(context.Context, string, string, time.Time) error
 	UserForSession(context.Context, string) (User, error)
 	RevokeSession(context.Context, string) error
+	RevokeUserSessions(context.Context, string) error
+	DeleteUser(context.Context, string) ([]Artwork, error)
+	AllowRateLimit(context.Context, string, int, time.Duration) (bool, time.Duration, error)
+	StartGeneration(context.Context, string, string, int) error
+	FinishGeneration(context.Context, string, string, string, string) error
 	CreateArtwork(context.Context, Artwork) error
 	ListArtworks(context.Context, string) ([]Artwork, error)
 	ListPublicArtworks(context.Context, int) ([]Artwork, error)
 	GetArtwork(context.Context, string) (Artwork, error)
 	GetArtworkByShareID(context.Context, string) (Artwork, error)
 	SetVisibility(context.Context, string, string, Visibility) error
+	RotateShareID(context.Context, string, string, string) error
 	DeleteArtwork(context.Context, string, string) (Artwork, error)
 }
 

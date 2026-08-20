@@ -1,0 +1,9 @@
+# The deployed Vercel project is the Next.js frontend. The Go API deploys to
+# Cloud Run, while the Remotion demo has its own dependency set.
+backend/
+video/
+tmp/
+.next/
+node_modules/
+output/
+.tools/

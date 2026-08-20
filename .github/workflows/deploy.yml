@@ -25,6 +25,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+      - run: npm audit --omit=dev --audit-level=high
       - uses: actions/setup-go@v6
         with:
           go-version-file: backend/go.mod
@@ -32,6 +33,8 @@ jobs:
       - run: go test ./...
         working-directory: backend
       - run: go vet ./...
+        working-directory: backend
+      - run: go build ./...
         working-directory: backend
 
   deploy-api:
@@ -74,6 +77,11 @@ jobs:
             MEANDER_APP_URL=${{ vars.MEANDER_WEB_ORIGIN }}
             MEANDER_API_URL=${{ vars.MEANDER_API_ORIGIN }}
             MEANDER_GOOGLE_CLIENT_ID=${{ vars.MEANDER_GOOGLE_CLIENT_ID }}
+            MEANDER_AUTH_LIMIT_15M=${{ vars.MEANDER_AUTH_LIMIT_15M || '300' }}
+            MEANDER_GENERATION_LIMIT_10M=${{ vars.MEANDER_GENERATION_LIMIT_10M || '6' }}
+            MEANDER_GENERATION_IP_LIMIT_HOUR=${{ vars.MEANDER_GENERATION_IP_LIMIT_HOUR || '300' }}
+            MEANDER_DAILY_GENERATION_LIMIT=${{ vars.MEANDER_DAILY_GENERATION_LIMIT || '25' }}
+            MEANDER_GENERATION_CONCURRENCY=${{ vars.MEANDER_GENERATION_CONCURRENCY || '1' }}
             MEANDER_FIXTURES=/app/fixtures
             MEANDER_OUTPUT=/app/output
             R2_ACCOUNT_ID=${{ vars.R2_ACCOUNT_ID }}
@@ -82,6 +90,7 @@ jobs:
             DATABASE_URL=meander-database-url:latest
             R2_ACCESS_KEY_ID=meander-r2-access-key-id:latest
             R2_SECRET_ACCESS_KEY=meander-r2-secret-access-key:latest
+            MEANDER_RATE_LIMIT_SALT=meander-rate-limit-salt:latest
       - name: Check API health
         env:
           API_URL: ${{ steps.deploy.outputs.url }}

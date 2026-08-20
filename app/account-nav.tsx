@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { API } from "@/app/api";
+import { API, MEANDER_REQUEST_HEADERS } from "@/app/api";
 
 type CurrentUser = { DisplayName?: string; Email?: string; display_name?: string; email?: string };
 
@@ -22,7 +22,7 @@ export function AccountNav() {
   async function signOut() {
     setSigningOut(true);
     try {
-      await fetch(`${API}/api/v1/auth/logout`, { method: "POST", credentials: "include" });
+      await fetch(`${API}/api/v1/auth/logout`, { method: "POST", credentials: "include", headers: MEANDER_REQUEST_HEADERS });
     } finally {
       window.location.assign("/");
     }

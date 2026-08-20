@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { AccountNav } from "@/app/account-nav";
-import { API } from "@/app/api";
+import { API, MEANDER_REQUEST_HEADERS } from "@/app/api";
 import { BrandMark } from "@/app/brand-mark";
 import { ScreenshotTracer } from "@/app/create/screenshot-tracer";
 import { GenerationTheatre } from "@/app/create/generation-theatre";
@@ -60,7 +60,7 @@ export default function CreatePage() {
     data.append("location_label", location || (inputKind === "sample" ? samples.find((item) => item.file === sample)?.name || "Untitled walk" : "Untitled walk"));
     data.append("time_of_day", time); data.append("music_tempo", tempo); data.append("music_energy", energy);
     try {
-      const response = await fetch(`${API}/api/v1/generate`, { method: "POST", credentials: "include", body: data });
+      const response = await fetch(`${API}/api/v1/generate`, { method: "POST", credentials: "include", headers: MEANDER_REQUEST_HEADERS, body: data });
       const body = await response.json().catch(() => ({}));
       if (response.status === 401) { setSignedIn(false); setStatus("idle"); return; }
       if (!response.ok) throw new Error(body.error || "The engine could not read that route.");
@@ -76,9 +76,12 @@ export default function CreatePage() {
 
   async function shareArtwork() {
     if (!result) return;
-    const response = await fetch(`${API}/api/v1/artworks/${result.id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ visibility: "unlisted" }) });
+    const response = await fetch(`${API}/api/v1/artworks/${result.id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json", ...MEANDER_REQUEST_HEADERS }, body: JSON.stringify({ visibility: "unlisted" }) });
     if (!response.ok) { setShareMessage("Sharing could not be enabled."); return; }
-    const url = `${window.location.origin}${result.share_url}`;
+    const updated = await response.json().catch(() => ({})) as Partial<Generation>;
+    const next = { ...result, ...updated };
+    setResult(next);
+    const url = `${window.location.origin}${next.share_url}`;
     try { await navigator.clipboard.writeText(url); setShareMessage("Private share link copied"); } catch { setShareMessage(url); }
   }
 
@@ -90,7 +93,7 @@ export default function CreatePage() {
   return <main className={`studio-page ${result ? "has-result" : ""}`}>
     {transforming && <GenerationTheatre stage={progress} routeFile={inputKind === "sample" ? null : route} sample={sample} title={location || samples.find((item) => item.file === sample)?.name || "Untitled walk"} timeOfDay={time} energy={Number(energy)} revealing={status === "revealing"} />}
     <header className="site-header studio-header"><Link className="brand" href="/"><BrandMark />Meander</Link><nav aria-label="Main navigation"><Link href="/how-it-works">How Meander works</Link><Link href="/gallery">Gallery</Link><Link href="/library">Library</Link></nav><AccountNav /></header>
-    {!result && <section className="studio-intro"><p className="section-kicker">One walk. One work.</p><h1>Bring a route.<br />Leave with art.</h1><p>Upload recorded activity data or trace a route from a screenshot. Your path supplies the direction; optional atmosphere controls shape how it feels.</p></section>}
+    {!result && <section className="studio-intro"><p className="section-kicker">One walk. One work.</p><h1>Bring a route.<br />Leave with art.</h1><p>Upload recorded activity data or a route screenshot—Meander will find the highlighted path for you. Your path supplies the direction; optional atmosphere controls shape how it feels.</p></section>}
     <section className="studio-workspace">
       <form className="studio-controls" onSubmit={submit}>
         {!signedIn && signedIn !== null && <div className="sign-in-first"><span>01 · BEFORE YOU BEGIN</span><h2>Sign in before choosing a private route.</h2><p>This keeps your file from being lost during the Google redirect. Meander never stores the raw route.</p><Link href="/sign-in?returnTo=/create">Continue with Google <b>↗</b></Link></div>}
@@ -98,7 +101,7 @@ export default function CreatePage() {
           <div className="control-block route-source"><span className="control-number">01</span><label>Choose your route <small>Required</small></label>
             <div className="source-tabs"><button type="button" aria-pressed={inputKind === "file"} onClick={() => { setInputKind("file"); setRoute(null); setScreenshot(null); }}>Activity file</button><button type="button" aria-pressed={inputKind === "screenshot"} onClick={() => { setInputKind("screenshot"); setRoute(null); setScreenshot(null); }}>Screenshot</button><button type="button" aria-pressed={inputKind === "sample"} onClick={() => { setInputKind("sample"); setRoute(null); setScreenshot(null); if (!location) setLocation(samples[0].name); }}>Try a sample</button></div>
             {inputKind === "file" && <label className="upload-drop"><input type="file" accept=".gpx,.osm,application/gpx+xml,application/xml,text/xml" onChange={(event) => { const next = event.target.files?.[0]; if (next) chooseRoute(next); }} /><strong>{route ? route.name : "Choose a GPX or OSM file"}</strong><span>{route ? "Ready to interpret" : "click to browse · up to 16 MB"}</span><b>{route ? "✓" : "Browse ↗"}</b></label>}
-            {inputKind === "screenshot" && !screenshot && !route && <label className="upload-drop screenshot-drop"><input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => { const next = event.target.files?.[0]; if (next) setScreenshot(next); }} /><strong>Upload a route screenshot</strong><span>PNG, JPEG or WebP · best when the full path is visible</span><b>Choose image ↗</b></label>}
+            {inputKind === "screenshot" && !screenshot && !route && <label className="upload-drop screenshot-drop"><input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => { const next = event.target.files?.[0]; if (next) setScreenshot(next); }} /><strong>Upload a route screenshot</strong><span>PNG, JPEG or WebP · Meander finds the highlighted route locally</span><b>Choose image ↗</b></label>}
             {inputKind === "screenshot" && route && <div className="screenshot-ready"><span>✓</span><div><strong>Screenshot route traced</strong><small>Geometry-only path ready for the engine</small></div><button type="button" onClick={() => { setRoute(null); setScreenshot(null); }}>Trace again</button></div>}
             {inputKind === "sample" && <div className="sample-grid">{samples.map((item) => <button type="button" className={sample === item.file ? "selected" : ""} onClick={() => { setSample(item.file); setLocation(item.name); }} key={item.file}><strong>{item.name}</strong><span>{item.place} · public geometry</span></button>)}</div>}
           </div>

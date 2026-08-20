@@ -123,18 +123,54 @@ type osmDoc struct {
 }
 
 func Parse(r io.Reader, filename string) ([]GeoPoint, error) {
-	b, err := io.ReadAll(io.LimitReader(r, 16<<20))
+	const maxRouteBytes = 16 << 20
+	b, err := io.ReadAll(io.LimitReader(r, maxRouteBytes+1))
 	if err != nil {
 		return nil, err
 	}
+	if len(b) > maxRouteBytes {
+		return nil, errors.New("route file exceeds the 16 MB limit")
+	}
 	if len(b) == 0 {
 		return nil, errors.New("route file is empty")
+	}
+	if err = validateXMLComplexity(b); err != nil {
+		return nil, err
 	}
 	name := strings.ToLower(filename)
 	if strings.HasSuffix(name, ".osm") || strings.Contains(string(b[:min(len(b), 300)]), "<osm") {
 		return parseOSM(b)
 	}
 	return parseGPX(b)
+}
+
+func validateXMLComplexity(b []byte) error {
+	decoder := xml.NewDecoder(strings.NewReader(string(b)))
+	decoder.Strict = true
+	const maxElements = 250000
+	const maxRouteElements = 100000
+	elements, routeElements := 0, 0
+	for {
+		token, err := decoder.Token()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("invalid route XML: %w", err)
+		}
+		start, ok := token.(xml.StartElement)
+		if !ok {
+			continue
+		}
+		elements++
+		if start.Name.Local == "trkpt" || start.Name.Local == "node" || start.Name.Local == "nd" {
+			routeElements++
+		}
+		if elements > maxElements || routeElements > maxRouteElements {
+			return errors.New("route file is too complex")
+		}
+	}
+	return nil
 }
 
 func parseGPX(b []byte) ([]GeoPoint, error) {
@@ -224,7 +260,7 @@ func validateGeo(in []GeoPoint) ([]GeoPoint, error) {
 	}
 	out := make([]GeoPoint, 0, len(in))
 	for _, p := range in {
-		if p.Lat < -90 || p.Lat > 90 || p.Lon < -180 || p.Lon > 180 {
+		if math.IsNaN(p.Lat) || math.IsInf(p.Lat, 0) || math.IsNaN(p.Lon) || math.IsInf(p.Lon, 0) || p.Lat < -90 || p.Lat > 90 || p.Lon < -180 || p.Lon > 180 {
 			continue
 		}
 		if len(out) == 0 || math.Abs(p.Lat-out[len(out)-1].Lat) > 1e-9 || math.Abs(p.Lon-out[len(out)-1].Lon) > 1e-9 {

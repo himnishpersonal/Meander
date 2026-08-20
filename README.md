@@ -270,5 +270,6 @@ See [Strava Integration and Learning Plan](docs/STRAVA_INTEGRATION_PLAN.md).
 
 - [Art Generation Engine](docs/ART_GENERATION_ENGINE.md)
 - [Strava Integration and Learning Plan](docs/STRAVA_INTEGRATION_PLAN.md)
+- [Public Release Checklist](docs/LAUNCH_CHECKLIST.md)
 - [Backend Engine Guide](backend/README.md)
 - [Calibration Corpus](backend/calibration/README.md)

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { API } from "@/app/api";
 import { BrandMark } from "@/app/brand-mark";
 
-type Artwork = { id: string; title: string; subtitle: string; palette: string; preview_url: string; artwork_url: string; visibility: string; created_at?: string; features?: { DistanceKM?: number; HardTurns?: number; DurationMinutes?: number; ElevationGainM?: number }; score?: { Total?: number } };
+type Artwork = { id: string; title: string; subtitle: string; palette: string; preview_url: string; artwork_url: string; visibility: string; created_at?: string; metrics?: { distance_km?: number; hard_turns?: number; composition_score?: number } };
 
 export default function SharedArtwork({ params }: { params: Promise<{ shareId: string }> }) {
   const [artwork, setArtwork] = useState<Artwork | null>(null);
@@ -13,8 +13,8 @@ export default function SharedArtwork({ params }: { params: Promise<{ shareId: s
   useEffect(() => { params.then(({ shareId }) => fetch(`${API}/api/v1/share/${shareId}`, { cache: "no-store" }).then(async (response) => { if (!response.ok) throw new Error(); return response.json(); }).then(setArtwork).catch(() => setError(true))); }, [params]);
   if (error) return <main className="share-page"><header className="site-header"><Link className="brand" href="/"><BrandMark />Meander</Link></header><div className="share-state"><p className="section-kicker">Not available</p><h1>This work is private.</h1><p>Its creator has not enabled sharing.</p><Link className="primary-action" href="/create">Make your own <span>↗</span></Link></div></main>;
   if (!artwork) return <main className="share-page"><div className="share-loading"><BrandMark /><span>Opening a walk’s pattern…</span></div></main>;
-  const distance = artwork.features?.DistanceKM && artwork.features.DistanceKM > 0 ? `${artwork.features.DistanceKM.toFixed(2)} km` : "Geometry only";
-  const rhythm = (artwork.features?.HardTurns || 0) > 12 ? "Angular" : (artwork.features?.HardTurns || 0) > 4 ? "Varied" : "Flowing";
+  const distance = artwork.metrics?.distance_km && artwork.metrics.distance_km > 0 ? `${artwork.metrics.distance_km.toFixed(2)} km` : "Geometry only";
+  const rhythm = (artwork.metrics?.hard_turns || 0) > 12 ? "Angular" : (artwork.metrics?.hard_turns || 0) > 4 ? "Varied" : "Flowing";
   const date = artwork.created_at ? new Date(artwork.created_at).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" }) : "A recorded walk";
   return <main className="share-page">
     <header className="site-header"><Link className="brand" href="/"><BrandMark />Meander</Link><nav aria-label="Main navigation"><Link href="/how-it-works">How Meander works</Link><Link href="/gallery">Gallery</Link></nav><Link className="nav-cta" href="/create">Make your own <span>↗</span></Link></header>

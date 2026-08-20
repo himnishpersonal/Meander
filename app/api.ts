@@ -6,3 +6,5 @@ const isLocalBrowser = typeof window !== "undefined" && ["localhost", "127.0.0.1
 const defaultBase = typeof window !== "undefined" && !isLocalBrowser ? "" : "http://localhost:8080";
 
 export const API = (configuredBase === "same-origin" ? "" : configuredBase || defaultBase).replace(/\/$/, "");
+
+export const MEANDER_REQUEST_HEADERS = { "X-Meander-Request": "browser" } as const;

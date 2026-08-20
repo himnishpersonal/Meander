@@ -60,6 +60,6 @@ export default function HowItWorksPage() {
     </section>
 
     <section className="process-cta"><p className="section-kicker">One walk. One work.</p><h2>Your walk already has a shape.<br /><span>Meander reveals it.</span></h2><Link href="/create">Create from your route <b>↗</b></Link></section>
-    <footer><Link className="brand" href="/"><BrandMark />Meander</Link><p>The geometry of going somewhere.</p><div><Link href="/how-it-works">Process</Link><Link href="/gallery">Gallery</Link><Link href="/library">Library</Link></div><small>© 2026 MEANDER · RAW ROUTES STAY PRIVATE</small></footer>
+    <footer><Link className="brand" href="/"><BrandMark />Meander</Link><p>The geometry of going somewhere.</p><div><Link href="/gallery">Gallery</Link><Link href="/library">Library</Link><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/copyright">Copyright</Link></div><small>© 2026 MEANDER · RAW ROUTES STAY PRIVATE</small></footer>
   </main>;
 }

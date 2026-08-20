@@ -25,6 +25,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+      - run: npm audit --omit=dev --audit-level=high
 
   engine:
     name: Go engine
@@ -40,6 +41,16 @@ jobs:
           cache-dependency-path: backend/go.mod
       - run: go test ./...
       - run: go vet ./...
+      - run: go build ./...
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
 
   container:
     name: Cloud Run container

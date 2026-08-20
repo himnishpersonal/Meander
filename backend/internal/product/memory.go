@@ -9,6 +9,7 @@ import (
 )
 
 var ErrNotFound = errors.New("record not found")
+var ErrQuotaExceeded = errors.New("daily generation quota reached")
 
 type MemoryStore struct {
 	mu       sync.RWMutex
@@ -18,6 +19,8 @@ type MemoryStore struct {
 	byShare  map[string]string
 	magic    map[string]memoryToken
 	sessions map[string]memoryToken
+	jobs     map[string]memoryJob
+	rates    map[string]memoryRate
 }
 
 type memoryToken struct {
@@ -26,8 +29,46 @@ type memoryToken struct {
 	Used      bool
 }
 
+type memoryJob struct {
+	UserID, Status string
+	CreatedAt      time.Time
+}
+
+type memoryRate struct {
+	Count int
+	Reset time.Time
+}
+
 func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{users: map[string]User{}, byEmail: map[string]string{}, artworks: map[string]Artwork{}, byShare: map[string]string{}, magic: map[string]memoryToken{}, sessions: map[string]memoryToken{}}
+	return &MemoryStore{users: map[string]User{}, byEmail: map[string]string{}, artworks: map[string]Artwork{}, byShare: map[string]string{}, magic: map[string]memoryToken{}, sessions: map[string]memoryToken{}, jobs: map[string]memoryJob{}, rates: map[string]memoryRate{}}
+}
+
+func (s *MemoryStore) StartGeneration(_ context.Context, id, userID string, dailyLimit int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	cutoff, count := time.Now().Add(-24*time.Hour), 0
+	for _, job := range s.jobs {
+		if job.UserID == userID && job.CreatedAt.After(cutoff) {
+			count++
+		}
+	}
+	if count >= dailyLimit {
+		return ErrQuotaExceeded
+	}
+	s.jobs[id] = memoryJob{UserID: userID, Status: "processing", CreatedAt: time.Now().UTC()}
+	return nil
+}
+
+func (s *MemoryStore) FinishGeneration(_ context.Context, id, status, _, _ string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	job, ok := s.jobs[id]
+	if !ok {
+		return ErrNotFound
+	}
+	job.Status = status
+	s.jobs[id] = job
+	return nil
 }
 
 func (s *MemoryStore) CreateMagicToken(_ context.Context, tokenHash, userID string, expiresAt time.Time) error {
@@ -80,6 +121,63 @@ func (s *MemoryStore) RevokeSession(_ context.Context, tokenHash string) error {
 	token.Used = true
 	s.sessions[tokenHash] = token
 	return nil
+}
+
+func (s *MemoryStore) RevokeUserSessions(_ context.Context, userID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for key, token := range s.sessions {
+		if token.UserID == userID {
+			token.Used = true
+			s.sessions[key] = token
+		}
+	}
+	return nil
+}
+
+func (s *MemoryStore) DeleteUser(_ context.Context, userID string) ([]Artwork, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	user, ok := s.users[userID]
+	if !ok {
+		return nil, ErrNotFound
+	}
+	artworks := make([]Artwork, 0)
+	for id, artwork := range s.artworks {
+		if artwork.UserID == userID {
+			artworks = append(artworks, artwork)
+			delete(s.artworks, id)
+			delete(s.byShare, artwork.ShareID)
+		}
+	}
+	for key, token := range s.sessions {
+		if token.UserID == userID {
+			delete(s.sessions, key)
+		}
+	}
+	delete(s.byEmail, user.Email)
+	delete(s.users, userID)
+	return artworks, nil
+}
+
+func (s *MemoryStore) AllowRateLimit(_ context.Context, key string, limit int, window time.Duration) (bool, time.Duration, error) {
+	if limit <= 0 {
+		return true, 0, nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := time.Now()
+	entry, ok := s.rates[key]
+	if !ok || !now.Before(entry.Reset) {
+		s.rates[key] = memoryRate{Count: 1, Reset: now.Add(window)}
+		return true, 0, nil
+	}
+	if entry.Count >= limit {
+		return false, time.Until(entry.Reset), nil
+	}
+	entry.Count++
+	s.rates[key] = entry
+	return true, 0, nil
 }
 
 func (s *MemoryStore) EnsureUser(_ context.Context, email, displayName string) (User, error) {
@@ -162,6 +260,19 @@ func (s *MemoryStore) SetVisibility(_ context.Context, id, userID string, visibi
 	}
 	a.Visibility = visibility
 	s.artworks[id] = a
+	return nil
+}
+
+func (s *MemoryStore) RotateShareID(_ context.Context, id, userID, shareID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	a, ok := s.artworks[id]
+	if !ok || a.UserID != userID {
+		return ErrNotFound
+	}
+	delete(s.byShare, a.ShareID)
+	a.ShareID = shareID
+	s.artworks[id], s.byShare[shareID] = a, id
 	return nil
 }
 
